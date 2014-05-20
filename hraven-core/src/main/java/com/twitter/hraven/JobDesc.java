@@ -157,9 +157,9 @@ public class JobDesc {
    * @see java.lang.Object#toString()
    */
   public String toString() {
-    return getCluster() + Constants.SEP + this.userName + Constants.SEP
-        + this.appId + Constants.SEP + this.version + Constants.SEP
-        + this.runId + Constants.SEP + this.jobId + Constants.SEP + this.framework;
+    return getCluster() + Constants.HBASE_SEP + this.userName + Constants.HBASE_SEP
+        + this.appId + Constants.HBASE_SEP + this.version + Constants.HBASE_SEP
+        + this.runId + Constants.HBASE_SEP + this.jobId + Constants.HBASE_SEP + this.framework;
   }
 
 }

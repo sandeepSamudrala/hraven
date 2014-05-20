@@ -29,14 +29,14 @@ public class QualifiedJobIdConverter implements ByteConverter<QualifiedJobId> {
 
   @Override
   public byte[] toBytes(QualifiedJobId id) {
-    return ByteUtil.join(Constants.SEP_BYTES,
+    return ByteUtil.join(Constants.HBASE_SEP_BYTES,
         Bytes.toBytes(id.getCluster()),
         jobIdConv.toBytes(id));
   }
 
   @Override
   public QualifiedJobId fromBytes(byte[] bytes) {
-    byte[][] parts = ByteUtil.split(bytes, Constants.SEP_BYTES, 2);
+    byte[][] parts = ByteUtil.split(bytes, Constants.HBASE_SEP_BYTES, 2);
     if (parts.length != 2) {
       throw new IllegalArgumentException("Invalid encoded ID, must be 2 parts");
     }

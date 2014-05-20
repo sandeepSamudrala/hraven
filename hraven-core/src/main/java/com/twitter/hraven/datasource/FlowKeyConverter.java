@@ -30,7 +30,7 @@ public class FlowKeyConverter implements ByteConverter<FlowKey> {
     if (flowKey == null) {
       return Constants.EMPTY_BYTES;
     } else {
-      return ByteUtil.join(Constants.SEP_BYTES,
+      return ByteUtil.join(Constants.HBASE_SEP_BYTES,
           Bytes.toBytes(flowKey.getCluster()),
           Bytes.toBytes(flowKey.getUserName()),
           Bytes.toBytes(flowKey.getAppId()),
@@ -40,7 +40,7 @@ public class FlowKeyConverter implements ByteConverter<FlowKey> {
 
   @Override
   public FlowKey fromBytes(byte[] bytes) {
-    return fromBytes(ByteUtil.split(bytes, Constants.SEP_BYTES, 4));
+    return fromBytes(ByteUtil.split(bytes, Constants.HBASE_SEP_BYTES, 4));
   }
 
   public FlowKey fromBytes(byte[][] splitBytes) {

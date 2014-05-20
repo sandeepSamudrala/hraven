@@ -31,13 +31,13 @@ public class FlowEventKeyConverter implements ByteConverter<FlowEventKey> {
     if (key == null) {
       return Constants.EMPTY_BYTES;
     }
-    return ByteUtil.join(Constants.SEP_BYTES, flowKeyConverter.toBytes(key),
+    return ByteUtil.join(Constants.HBASE_SEP_BYTES, flowKeyConverter.toBytes(key),
         Bytes.toBytes(key.getSequence()));
   }
 
   @Override
   public FlowEventKey fromBytes(byte[] bytes) {
-    byte[][] splits = ByteUtil.split(bytes, Constants.SEP_BYTES, 4);
+    byte[][] splits = ByteUtil.split(bytes, Constants.HBASE_SEP_BYTES, 4);
     byte[][] flowKeySplits = new byte[4][];
     for (int i=0; i<splits.length; i++) {
       flowKeySplits[i] = splits[i];
@@ -48,7 +48,7 @@ public class FlowEventKeyConverter implements ByteConverter<FlowEventKey> {
       // runId should be 8 bytes
       flowKeySplits[3] = ByteUtil.safeCopy(splits[3], offset, 8);
       // runId should be followed by SEP + sequence
-      offset += 8 + Constants.SEP_BYTES.length;
+      offset += 8 + Constants.HBASE_SEP_BYTES.length;
       byte[] seqBytes = ByteUtil.safeCopy(splits[3], offset, 4);
       if (seqBytes != null) {
         sequence = Bytes.toInt(seqBytes);

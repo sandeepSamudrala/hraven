@@ -37,7 +37,7 @@ public class StringUtil {
     if (token == null || token.length() == 0) { return token; };
 
     String cleansed = token.replaceAll(SPACE, UNDERSCORE);
-    cleansed = cleansed.replaceAll(Constants.SEP, UNDERSCORE);
+    cleansed = cleansed.replaceAll(Constants.HBASE_SEP, UNDERSCORE);
 
     return cleansed;
   }

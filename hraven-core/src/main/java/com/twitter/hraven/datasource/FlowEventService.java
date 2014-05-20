@@ -85,7 +85,7 @@ public class FlowEventService {
    * @return
    */
   public List<FlowEvent> getFlowEvents(FlowKey flowKey) throws IOException {
-    byte[] startKey = Bytes.add(flowKeyConverter.toBytes(flowKey), Constants.SEP_BYTES);
+    byte[] startKey = Bytes.add(flowKeyConverter.toBytes(flowKey), Constants.HBASE_SEP_BYTES);
     Scan scan = new Scan(startKey);
     scan.setFilter(new WhileMatchFilter(new PrefixFilter(startKey)));
 
@@ -115,7 +115,7 @@ public class FlowEventService {
    */
   public List<FlowEvent> getFlowEventsSince(FlowEventKey lastSeen) throws IOException {
     // rows must match the FlowKey portion + SEP
-    byte[] keyPrefix = Bytes.add(flowKeyConverter.toBytes(lastSeen), Constants.SEP_BYTES);
+    byte[] keyPrefix = Bytes.add(flowKeyConverter.toBytes(lastSeen), Constants.HBASE_SEP_BYTES);
     // start at the next following sequence number
     FlowEventKey nextEvent = new FlowEventKey(lastSeen.getCluster(), lastSeen.getUserName(),
         lastSeen.getAppId(), lastSeen.getRunId(), lastSeen.getSequence()+1);

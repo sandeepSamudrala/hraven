@@ -162,7 +162,7 @@ public class FlowQueueService {
   public List<Flow> getFlowsForStatus(String cluster, Flow.Status status, int limit,
                                       String user, byte[] startRow)
       throws IOException {
-    byte[] rowPrefix = ByteUtil.join(Constants.SEP_BYTES,
+    byte[] rowPrefix = ByteUtil.join(Constants.HBASE_SEP_BYTES,
         Bytes.toBytes(cluster), status.code(), Constants.EMPTY_BYTES);
     if (startRow == null) {
       startRow = rowPrefix;

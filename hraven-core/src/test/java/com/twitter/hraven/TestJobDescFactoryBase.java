@@ -7,7 +7,7 @@ import static junit.framework.Assert.assertEquals;
 
 public class TestJobDescFactoryBase extends JobDescFactoryBase {
 
-  public static final String UNSAFE_NAME = "soMe long" + Constants.SEP + "name";
+  public static final String UNSAFE_NAME = "soMe long" + Constants.HBASE_SEP + "name";
   public static final String SAFE_NAME = "soMe_long_name";
   
   /**

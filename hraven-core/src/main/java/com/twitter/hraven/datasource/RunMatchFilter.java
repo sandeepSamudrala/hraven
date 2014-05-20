@@ -65,7 +65,7 @@ public class RunMatchFilter extends FilterBase {
     // TODO: don't copy the byte[]
     byte[] rowkey = new byte[length];
     System.arraycopy(buffer, offset, rowkey, 0, length);
-    List<ByteUtil.Range> splits = ByteUtil.splitRanges(rowkey, Constants.SEP_BYTES);
+    List<ByteUtil.Range> splits = ByteUtil.splitRanges(rowkey, Constants.HBASE_SEP_BYTES);
     if (splits.size() < 4) {
       // invalid row key
       return true;

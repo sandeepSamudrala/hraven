@@ -17,6 +17,9 @@ package com.twitter.hraven.etl;
 
 import java.util.List;
 import org.apache.hadoop.hbase.client.Put;
+
+import com.twitter.hraven.JobHistoryMultiRecord;
+import com.twitter.hraven.JobHistoryRecord;
 import com.twitter.hraven.JobKey;
 import com.twitter.hraven.datasource.ProcessingException;
 
@@ -50,7 +53,7 @@ public interface JobHistoryFileParser {
 	 * 
 	 * @return a list of jobPuts
 	 */
-	public List<Put> getJobPuts();
+	public JobHistoryMultiRecord getJobRecords();
 
 	/**
 	 * Return the generated list of task puts assembled when history file is
@@ -58,6 +61,6 @@ public interface JobHistoryFileParser {
 	 * 
 	 * @return a list of taskPuts
 	 */
-	public List<Put> getTaskPuts();
+	public JobHistoryMultiRecord getTaskRecords();
 
 }

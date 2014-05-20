@@ -25,6 +25,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import com.twitter.hraven.Constants;
 import com.twitter.hraven.HadoopVersion;
 import com.twitter.hraven.JobHistoryKeys;
+import com.twitter.hraven.JobHistoryRecord;
+import com.twitter.hraven.JobKey;
+import com.twitter.hraven.RecordCategory;
+import com.twitter.hraven.RecordDataKey;
 import com.twitter.hraven.datasource.ProcessingException;
 import com.twitter.hraven.util.ByteUtil;
 
@@ -54,15 +58,12 @@ public abstract class JobHistoryFileParserBase implements JobHistoryFileParser {
 	 * 
 	 * @return Put
 	 */
-	public Put getHadoopVersionPut(HadoopVersion historyFileVersion, byte[] jobKeyBytes) {
-	  Put pVersion = new Put(jobKeyBytes);
-	  byte[] valueBytes = null;
-	  valueBytes = Bytes.toBytes(historyFileVersion.toString());
-	  byte[] qualifier = Bytes.toBytes(JobHistoryKeys.hadoopversion.toString().toLowerCase());
-	  pVersion.add(Constants.INFO_FAM_BYTES, qualifier, valueBytes);
-	  return pVersion;
+	public JobHistoryRecord getHadoopVersionRecord(HadoopVersion historyFileVersion, JobKey jobKey) {
+		return new JobHistoryRecord(RecordCategory.HISTORY_META, jobKey,
+				new RecordDataKey(JobHistoryKeys.hadoopversion.toString()
+						.toLowerCase()), historyFileVersion.toString());
 	}
-
+	
   /**
    * extract the string around Xmx in the java child opts " -Xmx1024m -verbose:gc"
    * @param javaChildOptsStr

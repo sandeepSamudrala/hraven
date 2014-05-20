@@ -110,7 +110,7 @@ public class GenerateFlowTestData {
       if (config != null) {
         for (Map.Entry<String,String> entry : config.entrySet()) {
           p.add(Constants.INFO_FAM_BYTES,
-              Bytes.toBytes(Constants.JOB_CONF_COLUMN_PREFIX + Constants.SEP + entry.getKey()),
+              Bytes.toBytes(Constants.JOB_CONF_COLUMN_PREFIX + Constants.HBASE_SEP + entry.getKey()),
               Bytes.toBytes(entry.getValue()));
         }
       }

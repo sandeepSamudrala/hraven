@@ -86,7 +86,7 @@ public class ProcessRecord {
    * 
    * @param cluster
    *          the cluster for which we are processing job files. Any
-   *          {@link Constants#SEP} sub-strings will be stripped out.
+   *          {@link Constants#HBASE_SEP} sub-strings will be stripped out.
    * @param minModificationTimeMillis
    *          The minimum modification time of a file to be accepted in
    *          milliseconds since January 1, 1970 UTC (excluding).
@@ -114,7 +114,7 @@ public class ProcessRecord {
    * 
    * @param cluster
    *          the cluster for which we are processing job files. Any
-   *          {@link Constants#SEP} sub-strings will be stripped out.
+   *          {@link Constants#HBASE_SEP} sub-strings will be stripped out.
    * @param processState
    *          to indicate what kind of processing has happend on this batch of
    *          Job Conf and History files.

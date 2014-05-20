@@ -61,8 +61,8 @@ public class TestAppVersionService {
     String appId = "addVersion";
     byte[] appIdBytes = Bytes.toBytes(appId);
 
-    byte[] appRow = Bytes.add(Bytes.add(clusterBytes, Constants.SEP_BYTES),
-        Bytes.add(userBytes, Constants.SEP_BYTES),
+    byte[] appRow = Bytes.add(Bytes.add(clusterBytes, Constants.HBASE_SEP_BYTES),
+        Bytes.add(userBytes, Constants.HBASE_SEP_BYTES),
         appIdBytes);
     HTable versionTable = new HTable(c, Constants.HISTORY_APP_VERSION_TABLE);
 

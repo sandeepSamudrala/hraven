@@ -27,14 +27,14 @@ public class ProcessRecordKeyConverter implements ByteConverter<ProcessRecordKey
   @Override
   public byte[] toBytes(ProcessRecordKey key) {
     long invertedTimestamp = Long.MAX_VALUE - key.getTimestamp();
-    return ByteUtil.join(Constants.SEP_BYTES,
+    return ByteUtil.join(Constants.HBASE_SEP_BYTES,
         Bytes.toBytes(key.getCluster()),
         Bytes.toBytes(invertedTimestamp));
   }
 
   @Override
   public ProcessRecordKey fromBytes(byte[] bytes) {
-    byte[][] parts = ByteUtil.split(bytes, Constants.SEP_BYTES, 2);
+    byte[][] parts = ByteUtil.split(bytes, Constants.HBASE_SEP_BYTES, 2);
     long invertedTimestamp = Bytes.toLong(parts[1]);
     return new ProcessRecordKey(Bytes.toString(parts[0]),
         Long.MAX_VALUE - invertedTimestamp);

@@ -183,7 +183,7 @@ public class JobHistoryRawService {
     }
 
     // Pull data only for our cluster
-    byte[] clusterPrefix = Bytes.toBytes(cluster + Constants.SEP);
+    byte[] clusterPrefix = Bytes.toBytes(cluster + Constants.HBASE_SEP);
     byte[] startRow;
     if (minJobId == null) {
       startRow = clusterPrefix;
@@ -219,7 +219,7 @@ public class JobHistoryRawService {
           oneBiggerThanMaxJobId));
 
     } else {
-      char oneBiggerSep = (char) (Constants.SEP_CHAR + 1);
+      char oneBiggerSep = (char) (Constants.HBASE_SEP_CHAR + 1);
       stopRow = Bytes.toBytes(cluster + oneBiggerSep);
     }
     // In addition to InclusiveStopRowFilter, set an estimated end-row that is
@@ -550,5 +550,9 @@ public class JobHistoryRawService {
 
     byte[] jobHistoryRaw = keyValue.getValue();
     return jobHistoryRaw;
+  }
+
+  public HTable getTable() {
+	return rawTable;
   }
 }

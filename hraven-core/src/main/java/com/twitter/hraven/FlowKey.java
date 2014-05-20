@@ -32,11 +32,11 @@ public class FlowKey implements Comparable {
    */
   protected final String userName;
   /**
-   * Identifying an application, which can go through different versions.
+   * Identifying an application/flow, which can go through different versions.
    */
   protected final String appId;
   /**
-   * Identifying one single run of a version of an app. Smaller values indicate
+   * Identifying one single run of a version of an app/flow. Smaller values indicate
    * a later run. We're using an inverted timestamp Long.MAXVALUE -
    * timstampMillis (milliseconds since January 1, 1970 UTC)
    */

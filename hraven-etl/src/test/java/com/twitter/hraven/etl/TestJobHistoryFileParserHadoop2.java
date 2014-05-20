@@ -23,6 +23,7 @@ import com.google.common.io.Files;
 import com.twitter.hraven.Constants;
 import com.twitter.hraven.HadoopVersion;
 import com.twitter.hraven.JobHistoryKeys;
+import com.twitter.hraven.JobHistoryRecord;
 import com.twitter.hraven.JobKey;
 import com.twitter.hraven.datasource.JobKeyConverter;
 import com.twitter.hraven.datasource.ProcessingException;
@@ -64,16 +65,16 @@ public class TestJobHistoryFileParserHadoop2 {
     JobKey jobKey = new JobKey("cluster1", "user", "Sleep", 1, "job_1329348432655_0001");
     historyFileParser.parse(contents, jobKey);
 
-    List<Put> jobPuts = historyFileParser.getJobPuts();
-    assertEquals(6, jobPuts.size());
+    List<JobHistoryRecord> jobRecords = historyFileParser.getJobRecords();
+    assertEquals(6, jobRecords.size());
 
     JobKeyConverter jobKeyConv = new JobKeyConverter();
     assertEquals("cluster1!user!Sleep!1!job_1329348432655_0001",
-      jobKeyConv.fromBytes(jobPuts.get(0).getRow()).toString());
+      jobKeyConv.fromBytes(jobRecords.get(0).getRow()).toString());
 
     // check hadoop version
     boolean foundVersion2 = false;
-    for (Put p : jobPuts) {
+    for (Put p : jobRecords) {
     	List<KeyValue> kv2 = p.get(Constants.INFO_FAM_BYTES,
     			Bytes.toBytes(JobHistoryKeys.hadoopversion.toString()));
     	if (kv2.size() == 0) {
@@ -101,7 +102,7 @@ public class TestJobHistoryFileParserHadoop2 {
 
     // check job status
     boolean foundJobStatus = false;
-    for (Put p : jobPuts) {
+    for (Put p : jobRecords) {
       List<KeyValue> kv2 =
           p.get(Constants.INFO_FAM_BYTES,
             Bytes.toBytes(JobHistoryKeys.JOB_STATUS.toString().toLowerCase()));
@@ -126,7 +127,7 @@ public class TestJobHistoryFileParserHadoop2 {
     // ensure that we got the JobStatus put
     assertTrue(foundJobStatus);
 
-    List<Put> taskPuts = historyFileParser.getTaskPuts();
+    List<Put> taskPuts = historyFileParser.getTaskRecords();
     assertEquals(taskPuts.size(), 45);
 
     TaskKeyConverter taskKeyConv = new TaskKeyConverter();
