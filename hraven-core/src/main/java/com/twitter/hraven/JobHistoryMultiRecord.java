@@ -74,14 +74,26 @@ public class JobHistoryMultiRecord extends HravenRecord<JobKey, Object> implemen
       Entry<RecordDataKey, Object> nextData;
 
       {
-        catIterator = valueMap.entrySet().iterator();
-        nextCat = catIterator.next();
-        dataIterator = nextCat.getValue().entrySet().iterator();
+        initIterators();
       }
 
+      private void initIterators() {
+        if (catIterator == null) {
+          catIterator = valueMap.entrySet().iterator();  
+        }
+        
+        if (catIterator.hasNext()) {
+          nextCat = catIterator.next();
+          dataIterator = nextCat.getValue().entrySet().iterator();  
+        }
+      }
+      
       @Override
       public boolean hasNext() {
-        return dataIterator.hasNext() || catIterator.hasNext();
+        if (dataIterator == null) {
+          initIterators();
+        }        
+        return dataIterator == null ? false : dataIterator.hasNext() || catIterator.hasNext();
       }
 
       @Override
