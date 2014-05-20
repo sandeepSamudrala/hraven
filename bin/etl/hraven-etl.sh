@@ -44,9 +44,9 @@ home=$(dirname $0)
 
 # set the hraven-core jar as part of libjars and hadoop classpath
 # set this here because it only pertains to the etl logic
-export LIBJARS=$home/../../lib/hraven-core.jar
+export LIBJARS=`find $home/../../lib/ -name 'hraven-core*.jar'`
 export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$LIBJARS
-hravenEtlJar=$home/../../lib/hraven-etl.jar
+hravenEtlJar=`find $home/../../lib/ -name 'hraven-etl*.jar'`
 
 source $home/../../conf/hraven-env.sh
 source $home/pidfiles.sh

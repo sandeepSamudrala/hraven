@@ -30,10 +30,10 @@ home=$(dirname $0)
 source $home/../../conf/hraven-env.sh
 source $home/pidfiles.sh
 myscriptname=$(basename "$0" .sh)
-hravenEtlJar=$home/../../lib/hraven-etl.jar
-LIBJARS=$home/../../lib/hraven-core.jar
+export LIBJARS=`find $home/../../lib/ -name 'hraven-core*.jar'`,$(ls $home/../../lib/guava-*.jar)
+hravenEtlJar=`find $home/../../lib/ -name 'hraven-etl*.jar'`
 stopfile=$HRAVEN_PID_DIR/$myscriptname.stop
-export HADOOP_CLASSPATH=$(ls $home/../../lib/commons-lang-*.jar)
+export HADOOP_CLASSPATH=$(ls $home/../../lib/commons-lang-*.jar):`find $home/../../lib/ -name 'hraven-core*.jar'`:`hbase classpath`:$(ls $home/../../lib/guava-*.jar)
 
 if [ -f $stopfile ]; then
   echo "Error: not allowed to run. Remove $stopfile continue." 1>&2
@@ -43,4 +43,4 @@ fi
 create_pidfile $HRAVEN_PID_DIR
 trap 'cleanup_pidfile_and_exit $HRAVEN_PID_DIR' INT TERM EXIT
 
-hadoop --config $1 jar $hravenEtlJar com.twitter.hraven.etl.JobFileProcessor -libjars=$LIBJARS -Dmapred.fairscheduler.pool=$2 -d -p $3 -c $4 -t $5 -b $6
+hadoop --config $1 jar $hravenEtlJar com.twitter.hraven.etl.JobFileProcessor -libjars=$LIBJARS -Dmapred.fairscheduler.pool=$2 -d -p $3 -c $4 -t $5 -b $6 -m default -z dummy.costfile
