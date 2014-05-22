@@ -157,7 +157,7 @@ public class TestByteUtil {
     byte[] comp3 = Bytes.toBytes("ghi");
 
     // test empty case
-    byte[] joined = ByteUtil.join(Constants.HBASE_SEP_BYTES);
+    byte[] joined = ByteUtil.join(Constants.SEP_BYTES);
     assertNotNull(joined);
     assertEquals(0, joined.length);
 
@@ -167,10 +167,10 @@ public class TestByteUtil {
     assertArrayEquals(Bytes.toBytes("abcdefghi"), joined);
 
     // test normal case
-    joined = ByteUtil.join(Constants.HBASE_SEP_BYTES, comp1, comp2, comp3);
+    joined = ByteUtil.join(Constants.SEP_BYTES, comp1, comp2, comp3);
     assertNotNull(joined);
     assertArrayEquals(
-        Bytes.toBytes("abc"+Constants.HBASE_SEP+"def"+Constants.HBASE_SEP+"ghi"), joined);
+        Bytes.toBytes("abc"+Constants.SEP+"def"+Constants.SEP+"ghi"), joined);
   }
 
   /**

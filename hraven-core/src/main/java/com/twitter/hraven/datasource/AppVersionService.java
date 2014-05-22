@@ -204,8 +204,8 @@ public class AppVersionService {
 
   private byte[] getRowKey(String cluster, String user, String appId) {
     String keyString = new StringBuilder(cluster)
-        .append(Constants.HBASE_SEP).append(user)
-        .append(Constants.HBASE_SEP).append(appId).toString();
+        .append(Constants.SEP).append(user)
+        .append(Constants.SEP).append(appId).toString();
     return Bytes.toBytes(keyString);
   }
 

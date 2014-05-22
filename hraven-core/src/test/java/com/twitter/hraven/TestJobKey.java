@@ -55,7 +55,7 @@ public class TestJobKey {
 
     // also verify that the runId gets inverted in the serialized byte
     // representation
-    byte[][] keyParts = ByteUtil.split(keyBytes, Constants.HBASE_SEP_BYTES);
+    byte[][] keyParts = ByteUtil.split(keyBytes, Constants.SEP_BYTES);
     assertEquals(5, keyParts.length);
     long encodedRunId = Bytes.toLong(keyParts[3]);
     assertEquals(key.getRunId(), Long.MAX_VALUE - encodedRunId);
@@ -71,7 +71,7 @@ public class TestJobKey {
     assertEquals(key.getJobId(), key2.getJobId());
 
     // key with no trailing job Id
-    keyBytes = ByteUtil.join(Constants.HBASE_SEP_BYTES,
+    keyBytes = ByteUtil.join(Constants.SEP_BYTES,
         Bytes.toBytes("c1@local"),
         Bytes.toBytes("user1"),
         Bytes.toBytes("app1"),
@@ -155,14 +155,14 @@ public class TestJobKey {
     long now = System.currentTimeMillis();
     byte[] encoded = Bytes.toBytes(Long.MAX_VALUE - now);
     // replace last byte with separator and reconvert to long
-    Bytes.putBytes(encoded, encoded.length-Constants.HBASE_SEP_BYTES.length,
-        Constants.HBASE_SEP_BYTES, 0, Constants.HBASE_SEP_BYTES.length);
+    Bytes.putBytes(encoded, encoded.length-Constants.SEP_BYTES.length,
+        Constants.SEP_BYTES, 0, Constants.SEP_BYTES.length);
     long badId = Long.MAX_VALUE - Bytes.toLong(encoded);
     LOG.info("Bad run ID is "+badId);
 
     // assemble a job key with the bad run ID
     JobIdConverter idConv = new JobIdConverter();
-    byte[] encodedKey = ByteUtil.join(Constants.HBASE_SEP_BYTES,
+    byte[] encodedKey = ByteUtil.join(Constants.SEP_BYTES,
         Bytes.toBytes("c1@local"),
         Bytes.toBytes("user1"),
         Bytes.toBytes("app1"),

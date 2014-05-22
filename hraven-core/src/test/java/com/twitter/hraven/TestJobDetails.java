@@ -72,9 +72,9 @@ public class TestJobDetails {
   private void addInMapCounters(NavigableMap<byte[], byte[]> infoValues) {
 
     // hadoop1 counters
-    byte[] c1 = Bytes.add(Constants.MAP_COUNTER_COLUMN_PREFIX_BYTES, Constants.HBASE_SEP_BYTES);
+    byte[] c1 = Bytes.add(Constants.MAP_COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
     byte[] c2 = Bytes.add(c1, Bytes.toBytes(Constants.FILESYSTEM_COUNTERS.toString()));
-    byte[] c3 = Bytes.add(c2, Constants.HBASE_SEP_BYTES);
+    byte[] c3 = Bytes.add(c2, Constants.SEP_BYTES);
 
     byte[] c4 = Bytes.add(c3, Bytes.toBytes(Constants.FILES_BYTES_READ.toString()));
 
@@ -85,9 +85,9 @@ public class TestJobDetails {
     infoValues.put(c4, Bytes.toBytes(JobDetailsValues.FILES_BYTES_WRITTEN_2));
 
     // hadoop2 counters
-    c1 = Bytes.add(Constants.MAP_COUNTER_COLUMN_PREFIX_BYTES, Constants.HBASE_SEP_BYTES);
+    c1 = Bytes.add(Constants.MAP_COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
     c2 = Bytes.add(c1, Bytes.toBytes(Constants.FILESYSTEM_COUNTER_HADOOP2.toString()));
-    c3 = Bytes.add(c2, Constants.HBASE_SEP_BYTES);
+    c3 = Bytes.add(c2, Constants.SEP_BYTES);
 
     c4 = Bytes.add(c3, Bytes.toBytes(Constants.FILES_BYTES_READ.toString()));
 
@@ -101,9 +101,9 @@ public class TestJobDetails {
   private void addInReduceCounters(NavigableMap<byte[], byte[]> infoValues) {
 
     // hadoop 1 counters
-    byte[] c1 = Bytes.add(Constants.REDUCE_COUNTER_COLUMN_PREFIX_BYTES, Constants.HBASE_SEP_BYTES);
+    byte[] c1 = Bytes.add(Constants.REDUCE_COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
     byte[] c2 = Bytes.add(c1, Bytes.toBytes(Constants.FILESYSTEM_COUNTERS.toString()));
-    byte[] c3 = Bytes.add(c2, Constants.HBASE_SEP_BYTES);
+    byte[] c3 = Bytes.add(c2, Constants.SEP_BYTES);
 
     byte[] c4 = Bytes.add(c3, Bytes.toBytes(Constants.FILES_BYTES_READ.toString()));
 
@@ -111,14 +111,14 @@ public class TestJobDetails {
     infoValues.put(c4, value);
 
     c2 = Bytes.add(c1, Bytes.toBytes(Constants.TASK_COUNTER.toString()));
-    c3 = Bytes.add(c2, Constants.HBASE_SEP_BYTES);
+    c3 = Bytes.add(c2, Constants.SEP_BYTES);
     c4 = Bytes.add(c3, Bytes.toBytes(Constants.REDUCE_SHUFFLE_BYTES.toString()));
     infoValues.put(c4, Bytes.toBytes(JobDetailsValues.REDUCE_SHUFFLE_BYTES_2));
 
     // hadoop2 counters
-    c1 = Bytes.add(Constants.REDUCE_COUNTER_COLUMN_PREFIX_BYTES, Constants.HBASE_SEP_BYTES);
+    c1 = Bytes.add(Constants.REDUCE_COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
     c2 = Bytes.add(c1, Bytes.toBytes(Constants.FILESYSTEM_COUNTER_HADOOP2.toString()));
-    c3 = Bytes.add(c2, Constants.HBASE_SEP_BYTES);
+    c3 = Bytes.add(c2, Constants.SEP_BYTES);
 
     c4 = Bytes.add(c3, Bytes.toBytes(Constants.FILES_BYTES_READ.toString()));
 
@@ -126,7 +126,7 @@ public class TestJobDetails {
     infoValues.put(c4, value);
 
     c2 = Bytes.add(c1, Bytes.toBytes(Constants.TASK_COUNTER_HADOOP2.toString()));
-    c3 = Bytes.add(c2, Constants.HBASE_SEP_BYTES);
+    c3 = Bytes.add(c2, Constants.SEP_BYTES);
     c4 = Bytes.add(c3, Bytes.toBytes(Constants.REDUCE_SHUFFLE_BYTES.toString()));
     infoValues.put(c4, Bytes.toBytes(JobDetailsValues.REDUCE_SHUFFLE_BYTES_2));
 
@@ -135,9 +135,9 @@ public class TestJobDetails {
   private void addInTotalCounters(NavigableMap<byte[], byte[]> infoValues) {
 
     // hadoop 1 counters
-    byte[] c1 = Bytes.add(Constants.COUNTER_COLUMN_PREFIX_BYTES, Constants.HBASE_SEP_BYTES);
+    byte[] c1 = Bytes.add(Constants.COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
     byte[] c2 = Bytes.add(c1, Bytes.toBytes(Constants.FILESYSTEM_COUNTERS.toString()));
-    byte[] c3 = Bytes.add(c2, Constants.HBASE_SEP_BYTES);
+    byte[] c3 = Bytes.add(c2, Constants.SEP_BYTES);
 
     byte[] c4 = Bytes.add(c3, Bytes.toBytes(Constants.HDFS_BYTES_READ.toString()));
     byte[] value = Bytes.toBytes(JobDetailsValues.HDFS_BYTES_READ_2);
@@ -148,7 +148,7 @@ public class TestJobDetails {
     infoValues.put(c4, value);
 
     c2 = Bytes.add(c1, Bytes.toBytes(Constants.JOBINPROGRESS_COUNTER.toString()));
-    c3 = Bytes.add(c2, Constants.HBASE_SEP_BYTES);
+    c3 = Bytes.add(c2, Constants.SEP_BYTES);
     c4 = Bytes.add(c3, Bytes.toBytes(Constants.SLOTS_MILLIS_MAPS.toString()));
     value = Bytes.toBytes(JobDetailsValues.SLOTS_MILLIS_MAPS_2);
     infoValues.put(c4, value);
@@ -158,9 +158,9 @@ public class TestJobDetails {
     infoValues.put(c4, value);
 
     // hadoop 2 counters
-    c1 = Bytes.add(Constants.COUNTER_COLUMN_PREFIX_BYTES, Constants.HBASE_SEP_BYTES);
+    c1 = Bytes.add(Constants.COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
     c2 = Bytes.add(c1, Bytes.toBytes(Constants.FILESYSTEM_COUNTER_HADOOP2.toString()));
-    c3 = Bytes.add(c2, Constants.HBASE_SEP_BYTES);
+    c3 = Bytes.add(c2, Constants.SEP_BYTES);
 
     c4 = Bytes.add(c3, Bytes.toBytes(Constants.HDFS_BYTES_READ.toString()));
     value = Bytes.toBytes(JobDetailsValues.HDFS_BYTES_READ_2);
@@ -171,7 +171,7 @@ public class TestJobDetails {
     infoValues.put(c4, value);
 
     c2 = Bytes.add(c1, Bytes.toBytes(Constants.JOB_COUNTER_HADOOP2.toString()));
-    c3 = Bytes.add(c2, Constants.HBASE_SEP_BYTES);
+    c3 = Bytes.add(c2, Constants.SEP_BYTES);
     c4 = Bytes.add(c3, Bytes.toBytes(Constants.SLOTS_MILLIS_MAPS.toString()));
     value = Bytes.toBytes(JobDetailsValues.SLOTS_MILLIS_MAPS_2);
     infoValues.put(c4, value);

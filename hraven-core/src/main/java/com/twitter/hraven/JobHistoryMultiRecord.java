@@ -24,8 +24,15 @@ public class JobHistoryMultiRecord extends HravenRecord<JobKey, Object> implemen
   }
 
   public JobHistoryMultiRecord(JobKey jobKey) {
-    this.setKey(jobKey);
+    setKey(jobKey);
     valueMap = new HashMap<RecordCategory, Map<RecordDataKey, Object>>();
+  }
+
+  public JobHistoryMultiRecord(JobHistoryRecord record) {
+    valueMap = new HashMap<RecordCategory, Map<RecordDataKey, Object>>();
+    setKey(record.getKey());
+    setSubmitTime(record.getSubmitTime());
+    add(record);
   }
 
   public void add(RecordCategory category, RecordDataKey key, Object value) {
@@ -38,7 +45,7 @@ public class JobHistoryMultiRecord extends HravenRecord<JobKey, Object> implemen
     }
   }
 
-  public void add(HravenRecord record) {
+  public void add(JobHistoryRecord record) {
     add(record.getDataCategory(), record.getDataKey(), record.getDataValue());
   }
 
@@ -111,8 +118,15 @@ public class JobHistoryMultiRecord extends HravenRecord<JobKey, Object> implemen
 
       @Override
       public void remove() {
+        throw new UnsupportedOperationException();
       }
 
     };
+  }
+
+  public void mergeWith(JobHistoryMultiRecord confRecord) {
+    for (JobHistoryRecord record: confRecord) {
+      add(record);
+    }
   }
 }

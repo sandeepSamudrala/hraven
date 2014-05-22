@@ -93,7 +93,7 @@ public class JobFileTableMapper extends
   private MultipleOutputs mos;
   
   /**
-   *  Defins the sinks to output to 
+   *  Define the sinks to output to 
    */
   
   private ArrayList<Sink> sinks;
@@ -140,7 +140,7 @@ public class JobFileTableMapper extends
     keyCount = 0;
 
     sinks =
-        (ArrayList<Sink>) Collections2.transform(Arrays.asList(StringUtils.split(context
+        new ArrayList<Sink>(Collections2.transform(Arrays.asList(StringUtils.split(context
             .getConfiguration().get(Constants.JOBCONF_SINKS), ',')), new Function<String, Sink>() {
 
           @Override
@@ -148,7 +148,7 @@ public class JobFileTableMapper extends
           public Sink apply(@Nullable String input) {
             return Sink.valueOf(input);
           }
-        });
+        }));
 
     mos = new MultipleOutputs<HravenService, HravenRecord>(context);
   }
@@ -216,9 +216,8 @@ public class JobFileTableMapper extends
       LOG.info(msg);
 
       JobHistoryMultiRecord confRecord = JobHistoryService.getConfRecord(jobDesc, jobConf);
-      confRecord.setSubmitTime(submitTimeMillis);
 
-      LOG.info("Writing JobConf puts to "
+      LOG.info("Sending JobConf records to "
           + HravenService.JOB_HISTORY + " service");
 
       // TODO:
@@ -229,8 +228,9 @@ public class JobFileTableMapper extends
       // Scan should get the first (lowest job-id) then grab the start-time from
       // the Job.
 
-      //1.1 Emit the puts for job xml/conf/"JobDesc"
-      sink(HravenService.JOB_HISTORY, confRecord);
+      //1.1 Emit the records for job xml/conf/"JobDesc"
+      //Don't sink config seperately - merge with history and then sink
+      //sink(HravenService.JOB_HISTORY, confRecord);
       context.progress();
 
       /** 
@@ -276,12 +276,13 @@ public class JobFileTableMapper extends
       //3.3: get and write job related data
       JobHistoryMultiRecord jobHistoryRecords = historyFileParser.getJobRecords();
       jobHistoryRecords.setSubmitTime(submitTimeMillis);
+      jobHistoryRecords.mergeWith(confRecord);
       
       if (jobHistoryRecords == null) {
     	  throw new ProcessingException(
-    			  " Unable to get job puts for this record!" + jobKey);
+    			  " Unable to get job history records for this job!" + jobKey);
       }
-      LOG.info("Writing " + jobHistoryRecords.size() + " Job records to "
+      LOG.info("Sending " + jobHistoryRecords.size() + " Job history records to "
           + HravenService.JOB_HISTORY + " service");
 
       sink(HravenService.JOB_HISTORY, jobHistoryRecords);
@@ -293,15 +294,15 @@ public class JobFileTableMapper extends
       
       if (taskHistoryRecords == null) {
     	  throw new ProcessingException(
-    			  " Unable to get task puts for this record!" + jobKey);
+    			  " Unable to get task records for this job!" + jobKey);
       }
-      LOG.info("Writing " + taskHistoryRecords.size() + " Task records to "
+      LOG.info("Sending " + taskHistoryRecords.size() + " Task history records to "
           + HravenService.JOB_HISTORY_TASK + " service");
 
       sink(HravenService.JOB_HISTORY_TASK, taskHistoryRecords);
       context.progress();
 
-      //3.5: post processing steps on job puts and job conf puts
+      //3.5: post processing steps on job records and job conf records
       Long mbMillis = historyFileParser.getMegaByteMillis();
       context.progress();
       if (mbMillis == null) {
@@ -310,7 +311,7 @@ public class JobFileTableMapper extends
       }
 
       JobHistoryRecord mbRecord = getMegaByteMillisRecord(mbMillis, jobKey);
-      LOG.info("Writing mega byte millis  puts to " + HravenService.JOB_HISTORY + " service");
+      LOG.info("Send mega byte millis records to " + HravenService.JOB_HISTORY + " service");
       
       sink(HravenService.JOB_HISTORY, mbRecord);
       context.progress();
@@ -323,7 +324,7 @@ public class JobFileTableMapper extends
             + jobKey);
       }
       JobHistoryRecord jobCostRecord = getJobCostRecord(jobCost, jobKey);
-      LOG.info("Writing jobCost puts to " + HravenService.JOB_HISTORY + " service");
+      LOG.info("Send jobCost records to " + HravenService.JOB_HISTORY + " service");
       sink(HravenService.JOB_HISTORY, jobCostRecord);
       context.progress();
 
@@ -379,10 +380,10 @@ public class JobFileTableMapper extends
 	}
 
 /**
-   * generates a put for the megabytemillis
+   * generates a record for the megabytemillis
    * @param mbMillis
    * @param jobKey
-   * @return the put with megabytemillis
+   * @return the record with megabytemillis
    */
 	private JobHistoryRecord getMegaByteMillisRecord(Long mbMillis,
 			JobKey jobKey) {
@@ -478,10 +479,10 @@ public class JobFileTableMapper extends
   }
 
   /**
-   * generates a put for the job cost
+   * generates a record for the job cost
    * @param jobCost
    * @param jobKey
-   * @return the put with job cost
+   * @return the record with job cost
    */
   
   private JobHistoryRecord getJobCostRecord(Double jobCost, JobKey jobKey) {

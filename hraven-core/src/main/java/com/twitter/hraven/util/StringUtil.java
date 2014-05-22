@@ -36,8 +36,9 @@ public class StringUtil {
   public static String cleanseToken(String token) {
     if (token == null || token.length() == 0) { return token; };
 
+    token = token.trim();
     String cleansed = token.replaceAll(SPACE, UNDERSCORE);
-    cleansed = cleansed.replaceAll(Constants.HBASE_SEP, UNDERSCORE);
+    cleansed = cleansed.replaceAll(Constants.SEP, UNDERSCORE);
 
     return cleansed;
   }

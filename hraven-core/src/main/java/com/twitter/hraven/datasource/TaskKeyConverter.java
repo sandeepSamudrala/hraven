@@ -35,7 +35,7 @@ public class TaskKeyConverter implements ByteConverter<TaskKey> {
    */
   @Override
   public byte[] toBytes(TaskKey taskKey) {
-    return Bytes.add(jobKeyConv.toBytes(taskKey), Constants.HBASE_SEP_BYTES,
+    return Bytes.add(jobKeyConv.toBytes(taskKey), Constants.SEP_BYTES,
         Bytes.toBytes(taskKey.getTaskId()));
   }
 

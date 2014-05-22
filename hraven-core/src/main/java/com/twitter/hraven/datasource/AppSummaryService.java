@@ -75,10 +75,10 @@ public class AppSummaryService {
       String user, long startTime, long endTime, int limit) throws IOException {
     byte[] startRow = null;
     if (StringUtils.isNotBlank(user)) {
-      startRow = ByteUtil.join(Constants.HBASE_SEP_BYTES,
+      startRow = ByteUtil.join(Constants.SEP_BYTES,
       Bytes.toBytes(cluster), Bytes.toBytes(user));
     } else {
-      startRow = ByteUtil.join(Constants.HBASE_SEP_BYTES,
+      startRow = ByteUtil.join(Constants.SEP_BYTES,
         Bytes.toBytes(cluster));
     }
     LOG.info("Reading app version rows start at " + Bytes.toStringBinary(startRow));
@@ -172,7 +172,7 @@ public class AppSummaryService {
       throws IOException {
 
     byte[] rowKey = result.getRow();
-    byte[][] keyComponents = ByteUtil.split(rowKey, Constants.HBASE_SEP_BYTES);
+    byte[][] keyComponents = ByteUtil.split(rowKey, Constants.SEP_BYTES);
     String cluster = Bytes.toString(keyComponents[0]);
     String user = Bytes.toString(keyComponents[1]);
     String appId = Bytes.toString(keyComponents[2]);

@@ -32,7 +32,7 @@ public class FlowQueueKeyConverter implements ByteConverter<FlowQueueKey> {
       return Constants.EMPTY_BYTES;
     }
     long invertedTimestamp = Long.MAX_VALUE - key.getTimestamp();
-    return ByteUtil.join(Constants.HBASE_SEP_BYTES,
+    return ByteUtil.join(Constants.SEP_BYTES,
         Bytes.toBytes(key.getCluster()),
         (key.getStatus() == null ? Constants.EMPTY_BYTES : key.getStatus().code()),
         Bytes.toBytes(invertedTimestamp),
@@ -45,13 +45,13 @@ public class FlowQueueKeyConverter implements ByteConverter<FlowQueueKey> {
       return null;
     }
 
-    byte[][] firstSplit = ByteUtil.split(bytes, Constants.HBASE_SEP_BYTES, 3);
+    byte[][] firstSplit = ByteUtil.split(bytes, Constants.SEP_BYTES, 3);
     byte[] timestampBytes = null;
     byte[] flowIdBytes = null;
     if (firstSplit.length == 3) {
       int offset = 0;
       timestampBytes = ByteUtil.safeCopy(firstSplit[2], 0, 8);
-      offset += 8+Constants.HBASE_SEP_BYTES.length;
+      offset += 8+Constants.SEP_BYTES.length;
       flowIdBytes = ByteUtil.safeCopy(firstSplit[2], offset, firstSplit[2].length - offset);
     }
 

@@ -57,8 +57,8 @@ public class TestTaskKey {
     long now = System.currentTimeMillis();
     byte[] encoded = Bytes.toBytes(Long.MAX_VALUE - now);
     // replace last byte with separator and reconvert to long
-    Bytes.putBytes(encoded, encoded.length-Constants.HBASE_SEP_BYTES.length,
-        Constants.HBASE_SEP_BYTES, 0, Constants.HBASE_SEP_BYTES.length);
+    Bytes.putBytes(encoded, encoded.length-Constants.SEP_BYTES.length,
+        Constants.SEP_BYTES, 0, Constants.SEP_BYTES.length);
     long badId = Long.MAX_VALUE - Bytes.toLong(encoded);
     LOG.info("Bad run ID is " + badId);
 

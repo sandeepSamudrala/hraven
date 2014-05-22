@@ -135,7 +135,7 @@ public class JobHistoryService {
   throws IOException {
     Flow flow = null;
 
-    byte[] startRow = ByteUtil.join(Constants.HBASE_SEP_BYTES,
+    byte[] startRow = ByteUtil.join(Constants.SEP_BYTES,
         Bytes.toBytes(cluster), Bytes.toBytes(user), Bytes.toBytes(appId),
         Bytes.toBytes(FlowKey.encodeRunId(runId)), Constants.EMPTY_BYTES);
 
@@ -166,7 +166,7 @@ public class JobHistoryService {
     Flow flow = null;
     JobKey key = idService.getJobKeyById(new QualifiedJobId(cluster, jobId));
     if (key != null) {
-      byte[] startRow = ByteUtil.join(Constants.HBASE_SEP_BYTES,
+      byte[] startRow = ByteUtil.join(Constants.SEP_BYTES,
           Bytes.toBytes(key.getCluster()), Bytes.toBytes(key.getUserName()),
           Bytes.toBytes(key.getAppId()),
           Bytes.toBytes(key.getEncodedRunId()), Constants.EMPTY_BYTES);
@@ -239,8 +239,8 @@ public class JobHistoryService {
   public List<Flow> getFlowSeries(String cluster, String user, String appId,
       String version, boolean populateTasks, int limit) throws IOException {
     // TODO: use RunMatchFilter to limit scan on the server side
-    byte[] rowPrefix = Bytes.toBytes(cluster + Constants.HBASE_SEP + user
-        + Constants.HBASE_SEP + appId + Constants.HBASE_SEP);
+    byte[] rowPrefix = Bytes.toBytes(cluster + Constants.SEP + user
+        + Constants.SEP + appId + Constants.SEP);
     Scan scan = createFlowScan(rowPrefix, limit, version);
     return createFromResults(scan, populateTasks, limit);
   }
@@ -274,7 +274,7 @@ public class JobHistoryService {
       boolean populateTasks, long startTime, long endTime, int limit) throws IOException {
     // TODO: use RunMatchFilter to limit scan on the server side
     byte[] rowPrefix =
-        Bytes.toBytes(cluster + Constants.HBASE_SEP + user + Constants.HBASE_SEP + appId + Constants.HBASE_SEP);
+        Bytes.toBytes(cluster + Constants.SEP + user + Constants.SEP + appId + Constants.SEP);
     Scan scan = createFlowScan(rowPrefix, limit, version);
 
     // set the start and stop rows for scan so that it's time bound
@@ -282,7 +282,7 @@ public class JobHistoryService {
       byte[] scanStartRow;
       // use end time in start row, if present
       long endRunId = FlowKey.encodeRunId(endTime);
-      scanStartRow = Bytes.add(rowPrefix, Bytes.toBytes(endRunId), Constants.HBASE_SEP_BYTES);
+      scanStartRow = Bytes.add(rowPrefix, Bytes.toBytes(endRunId), Constants.SEP_BYTES);
       scan.setStartRow(scanStartRow);
     }
 
@@ -290,7 +290,7 @@ public class JobHistoryService {
       byte[] scanStopRow;
       // use start time in stop row, if present
       long stopRunId = FlowKey.encodeRunId(startTime);
-      scanStopRow = Bytes.add(rowPrefix, Bytes.toBytes(stopRunId), Constants.HBASE_SEP_BYTES);
+      scanStopRow = Bytes.add(rowPrefix, Bytes.toBytes(stopRunId), Constants.SEP_BYTES);
       scan.setStopRow(scanStopRow);
     }
     return createFromResults(scan, populateTasks, limit);
@@ -327,8 +327,8 @@ public class JobHistoryService {
       String version, long startTime, long endTime, int limit, byte[] startRow) throws IOException {
 
     // app portion of row key
-    byte[] rowPrefix = Bytes.toBytes((cluster + Constants.HBASE_SEP + user + Constants.HBASE_SEP
-        + appId + Constants.HBASE_SEP ));
+    byte[] rowPrefix = Bytes.toBytes((cluster + Constants.SEP + user + Constants.SEP
+        + appId + Constants.SEP ));
     byte[] scanStartRow;
 
     if (startRow != null ) {
@@ -337,7 +337,7 @@ public class JobHistoryService {
       if (endTime != 0) {
         // use end time in start row, if present
         long endRunId = FlowKey.encodeRunId(endTime);
-        scanStartRow = Bytes.add(rowPrefix, Bytes.toBytes(endRunId), Constants.HBASE_SEP_BYTES);
+        scanStartRow = Bytes.add(rowPrefix, Bytes.toBytes(endRunId), Constants.SEP_BYTES);
       } else {
         scanStartRow = rowPrefix;
       }
@@ -507,7 +507,7 @@ public class JobHistoryService {
       return;
     }
 
-    byte[] startKey = Bytes.add(jobKeyConv.toBytes(startJob), Constants.HBASE_SEP_BYTES);
+    byte[] startKey = Bytes.add(jobKeyConv.toBytes(startJob), Constants.SEP_BYTES);
     Scan scan = new Scan();
     scan.setStartRow(startKey);
     // expect a lot of tasks on average
@@ -587,7 +587,7 @@ public class JobHistoryService {
    * @return a {@code Scan} instance for the job_history_task table
    */
   private Scan getTaskScan(JobKey jobKey) {
-    byte[] startKey = Bytes.add(jobKeyConv.toBytes(jobKey), Constants.HBASE_SEP_BYTES);
+    byte[] startKey = Bytes.add(jobKeyConv.toBytes(jobKey), Constants.SEP_BYTES);
     Scan scan = new Scan();
     scan.setStartRow(startKey);
     // only return tasks for this job
@@ -607,7 +607,7 @@ public class JobHistoryService {
   public static Configuration parseConfiguration(Map<byte[], byte[]> keyValues) {
     Configuration config = new Configuration(false);
     byte[] configPrefix = Bytes.add(Constants.JOB_CONF_COLUMN_PREFIX_BYTES,
-        Constants.HBASE_SEP_BYTES);
+        Constants.SEP_BYTES);
     for (Map.Entry<byte[], byte[]> entry : keyValues.entrySet()) {
       byte[] key = entry.getKey();
       if (Bytes.startsWith(key, configPrefix)
@@ -629,7 +629,7 @@ public class JobHistoryService {
   public static CounterMap parseCounters(byte[] prefix,
       Map<byte[], byte[]> keyValues) {
     CounterMap counterValues = new CounterMap();
-    byte[] counterPrefix = Bytes.add(prefix, Constants.HBASE_SEP_BYTES);
+    byte[] counterPrefix = Bytes.add(prefix, Constants.SEP_BYTES);
     for (Map.Entry<byte[], byte[]> entry : keyValues.entrySet()) {
       byte[] key = entry.getKey();
       if (Bytes.startsWith(key, counterPrefix)
@@ -637,7 +637,7 @@ public class JobHistoryService {
         // qualifier should be in the format: g!countergroup!counterkey
         byte[][] qualifierFields = ByteUtil.split(
             Bytes.tail(key, key.length - counterPrefix.length),
-            Constants.HBASE_SEP_BYTES);
+            Constants.SEP_BYTES);
         if (qualifierFields.length != 2) {
           throw new IllegalArgumentException(
               "Malformed column qualifier for counter value: "

@@ -29,10 +29,10 @@ public class Constants {
 
   // separator character used between key components
   public static final char HBASE_SEP_CHAR = '!';
-  public static final String HBASE_SEP = "" + HBASE_SEP_CHAR;
-  public static final byte[] HBASE_SEP_BYTES = Bytes.toBytes(HBASE_SEP);
+  public static final String SEP = "" + HBASE_SEP_CHAR;
+  public static final byte[] SEP_BYTES = Bytes.toBytes(SEP);
   
-  public static final String SEP_CHAR = ".";
+  public static final String PERIOD_SEP_CHAR = ".";
 
   // common default values
   public static final byte[] EMPTY_BYTES = new byte[0];
@@ -433,4 +433,8 @@ public class Constants {
   public static final int GRAPHITE_DEFAULT_PORT = 2003;
   
   public static final String JOBCONF_SINKS = "hraven.sinks";
+
+  public static final String GRAPHITE_DEFAULT_HOST = "localhost";
+
+  public static final String GRAPHITE_DEFAULT_PREFIX = "DEFAULT";
 }

@@ -38,7 +38,7 @@ public class JobKeyConverter implements ByteConverter<JobKey> {
     if (jobKey == null) {
       return Constants.EMPTY_BYTES;
     } else {
-      return ByteUtil.join(Constants.HBASE_SEP_BYTES,
+      return ByteUtil.join(Constants.SEP_BYTES,
           Bytes.toBytes(jobKey.getCluster()),
           Bytes.toBytes(jobKey.getUserName()),
           Bytes.toBytes(jobKey.getAppId()),
@@ -96,7 +96,7 @@ public class JobKeyConverter implements ByteConverter<JobKey> {
    * @return
    */
   static byte[][] splitJobKey(byte[] rawKey) {
-    byte[][] splits = ByteUtil.split(rawKey, Constants.HBASE_SEP_BYTES, 4);
+    byte[][] splits = ByteUtil.split(rawKey, Constants.SEP_BYTES, 4);
 
     /* final components (runId!jobId!additional) need to be split separately for correct
      * handling of runId long encoding */
@@ -109,9 +109,9 @@ public class JobKeyConverter implements ByteConverter<JobKey> {
       // run ID
       extraComponents[0] = ByteUtil.safeCopy(remainder, offset, 8);
       // followed by sep + job epoch + job seq
-      offset += 8+Constants.HBASE_SEP_BYTES.length;
+      offset += 8+Constants.SEP_BYTES.length;
       extraComponents[1] = ByteUtil.safeCopy(remainder, offset, 16);
-      offset += 16+Constants.HBASE_SEP_BYTES.length;
+      offset += 16+Constants.SEP_BYTES.length;
       // followed by any remainder
       extraComponents[2] = ByteUtil.safeCopy(remainder, offset, remainder.length - offset);
 

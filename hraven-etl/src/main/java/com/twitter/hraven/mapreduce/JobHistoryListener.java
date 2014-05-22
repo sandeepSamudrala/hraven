@@ -105,11 +105,10 @@ public class JobHistoryListener implements Listener {
       // skip other types
       ;
     }
-    //System.out.println("Reading: " + recType.toString());
   }
 
   private interface RecordGenerator {
-	  public HravenRecord getRecord(RecordDataKey key, Object value);
+	  public JobHistoryRecord getRecord(RecordDataKey key, Object value, boolean isNumeric);
   }
   
   private void handleJob(Map<JobHistoryKeys, String> values) {
@@ -125,12 +124,12 @@ public class JobHistoryListener implements Listener {
     }
     
     for (Map.Entry<JobHistoryKeys, String> e : values.entrySet()) {
-        addRecords(jobRecords, e.getKey(), e.getValue(), new RecordGenerator() {
-			@Override
-			public HravenRecord getRecord(RecordDataKey key, Object value) {
-				return new JobHistoryRecord(RecordCategory.HISTORY_COUNTER, jobKey, key, value);
-			}
-        });
+      addRecords(jobRecords, e.getKey(), e.getValue(), new RecordGenerator() {
+        @Override
+        public JobHistoryRecord getRecord(RecordDataKey key, Object value, boolean isNumeric) {
+          return new JobHistoryRecord(isNumeric ? RecordCategory.HISTORY_COUNTER : RecordCategory.HISTORY_META, jobKey, key, value);
+        }
+      });
     }
   }
 
@@ -157,12 +156,12 @@ public class JobHistoryListener implements Listener {
 			RecordCategory.HISTORY_TASK_META, taskKey, new RecordDataKey(
 			Constants.RECORD_TYPE_COL), RecordTypes.Task.toString()));
     
-    for (Map.Entry<JobHistoryKeys,String> e : values.entrySet()) {
+    for (Map.Entry<JobHistoryKeys, String> e : values.entrySet()) {
       addRecords(taskRecords, e.getKey(), e.getValue(), new RecordGenerator() {
-		@Override
-		public HravenRecord getRecord(RecordDataKey key, Object value) {
-			return new JobHistoryRecord(RecordCategory.HISTORY_TASK_COUNTER, taskKey, key, value);
-		}
+        @Override
+        public JobHistoryRecord getRecord(RecordDataKey key, Object value, boolean isNumeric) {
+          return new JobHistoryRecord(isNumeric ? RecordCategory.HISTORY_TASK_COUNTER : RecordCategory.HISTORY_TASK_META, taskKey, key, value);
+        }
       });
     }
   }
@@ -174,13 +173,13 @@ public class JobHistoryListener implements Listener {
 			RecordCategory.HISTORY_TASK_META, taskKey, new RecordDataKey(
 			Constants.RECORD_TYPE_COL), RecordTypes.MapAttempt.toString()));
 	
-    for (Map.Entry<JobHistoryKeys,String> e : values.entrySet()) {
+    for (Map.Entry<JobHistoryKeys, String> e : values.entrySet()) {
       addRecords(taskRecords, e.getKey(), e.getValue(), new RecordGenerator() {
-  		@Override
-  		public HravenRecord getRecord(RecordDataKey key, Object value) {
-  			return new JobHistoryRecord(RecordCategory.HISTORY_TASK_COUNTER, taskKey, key, value);
-  		}
-        });
+        @Override
+        public JobHistoryRecord getRecord(RecordDataKey key, Object value, boolean isNumeric) {
+          return new JobHistoryRecord(isNumeric ? RecordCategory.HISTORY_TASK_COUNTER : RecordCategory.HISTORY_TASK_META, taskKey, key, value);
+        }
+      });
     }
   }
 
@@ -191,74 +190,69 @@ public class JobHistoryListener implements Listener {
 			RecordCategory.HISTORY_TASK_META, taskKey, new RecordDataKey(
 			Constants.RECORD_TYPE_COL), RecordTypes.ReduceAttempt.toString()));
 	
-    for (Map.Entry<JobHistoryKeys,String> e : values.entrySet()) {
+    for (Map.Entry<JobHistoryKeys, String> e : values.entrySet()) {
       addRecords(taskRecords, e.getKey(), e.getValue(), new RecordGenerator() {
-  		@Override
-  		public HravenRecord getRecord(RecordDataKey key, Object value) {
-  			return new JobHistoryRecord(RecordCategory.HISTORY_TASK_COUNTER, taskKey, key, value);
-  		}
-        });
+        @Override
+        public JobHistoryRecord getRecord(RecordDataKey key, Object value, boolean isNumeric) {
+          return new JobHistoryRecord(isNumeric ? RecordCategory.HISTORY_TASK_COUNTER : RecordCategory.HISTORY_TASK_META, taskKey, key, value);
+        }
+      });
     }
   }
 
-	private void addRecords(JobHistoryMultiRecord records, JobHistoryKeys key,
-			String value, RecordGenerator generator) {
-		if (key == JobHistoryKeys.COUNTERS
-				|| key == JobHistoryKeys.MAP_COUNTERS
-				|| key == JobHistoryKeys.REDUCE_COUNTERS) {
-			try {
-				Counters counters = Counters.fromEscapedCompactString(value);
+  private void addRecords(JobHistoryMultiRecord records, JobHistoryKeys key, String value,
+      RecordGenerator generator) {
+    if (key == JobHistoryKeys.COUNTERS || key == JobHistoryKeys.MAP_COUNTERS
+        || key == JobHistoryKeys.REDUCE_COUNTERS) {
+      try {
+        Counters counters = Counters.fromEscapedCompactString(value);
 
-				RecordDataKey dataKey = new RecordDataKey(key.toString());
+        for (Counters.Group group : counters) {
+          for (Counters.Counter counter : group) {
+            RecordDataKey dataKey = new RecordDataKey(key.toString());
+            dataKey.add(group.getName());
+            String counterName = counter.getName();
+            long counterValue = counter.getValue();
+            dataKey.add(counterName);
+            records.add(generator.getRecord(dataKey, counterValue, true));
 
-				for (Counters.Group group : counters) {
-					dataKey.add(group.getName());
-
-					for (Counters.Counter counter : group) {
-						String counterName = counter.getName();
-						long counterValue = counter.getValue();
-						dataKey.add(counterName);
-						records.add(generator.getRecord(dataKey,
-								counterValue));
-
-						// get the map and reduce slot millis for megabytemillis
-						// calculations
-						if (Constants.SLOTS_MILLIS_MAPS.equals(counterName)) {
-							this.mapSlotMillis = counterValue;
-						}
-						if (Constants.SLOTS_MILLIS_REDUCES.equals(counterName)) {
-							this.reduceSlotMillis = counterValue;
-						}
-					}
-				}
-			} catch (ParseException pe) {
-				LOG.error("Counters could not be parsed from string'" + value
-						+ "'", pe);
-			}
-		} else {
-			@SuppressWarnings("rawtypes")
-			Class clazz = JobHistoryKeys.KEY_TYPES.get(key);
-			Object valueObj = value;
-			if (Integer.class.equals(clazz)) {
-				try {
-					valueObj = (value != null && value.trim().length() > 0) ? Integer
-							.parseInt(value) : 0;
-				} catch (NumberFormatException nfe) {
-					valueObj = 0;
-				}
-			} else if (Long.class.equals(clazz)) {
-				try {
-					valueObj = (value != null && value.trim().length() > 0) ? Long
-							.parseLong(value) : 0;
-				} catch (NumberFormatException nfe) {
-					valueObj = 0;
-				}
-
-				records.add(generator.getRecord(new RecordDataKey(key
-						.toString().toLowerCase()), valueObj));
-			}
-		}
-	}
+            // get the map and reduce slot millis for megabytemillis
+            // calculations
+            if (Constants.SLOTS_MILLIS_MAPS.equals(counterName)) {
+              this.mapSlotMillis = counterValue;
+            }
+            if (Constants.SLOTS_MILLIS_REDUCES.equals(counterName)) {
+              this.reduceSlotMillis = counterValue;
+            }
+          }
+        }
+      } catch (ParseException pe) {
+        LOG.error("Counters could not be parsed from string'" + value + "'", pe);
+      }
+    } else {
+      @SuppressWarnings("rawtypes")
+      Class clazz = JobHistoryKeys.KEY_TYPES.get(key);
+      Object valueObj = value;
+      boolean isNumeric = false;
+      if (Integer.class.equals(clazz)) {
+        isNumeric = true;
+        try {
+          valueObj = (value != null && value.trim().length() > 0) ? Integer.parseInt(value) : 0;
+        } catch (NumberFormatException nfe) {
+          valueObj = 0;
+        }
+      } else if (Long.class.equals(clazz)) {
+        isNumeric = true;
+        try {
+          valueObj = (value != null && value.trim().length() > 0) ? Long.parseLong(value) : 0;
+        } catch (NumberFormatException nfe) {
+          valueObj = 0;
+        }
+      }
+      
+      records.add(generator.getRecord(new RecordDataKey(key.toString().toLowerCase()), valueObj, isNumeric));
+    }
+  }
 
   /**
    * Sets the job ID and strips out the job number (job ID minus the "job_" prefix).

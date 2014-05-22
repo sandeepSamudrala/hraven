@@ -183,7 +183,7 @@ public class JobHistoryRawService {
     }
 
     // Pull data only for our cluster
-    byte[] clusterPrefix = Bytes.toBytes(cluster + Constants.HBASE_SEP);
+    byte[] clusterPrefix = Bytes.toBytes(cluster + Constants.SEP);
     byte[] startRow;
     if (minJobId == null) {
       startRow = clusterPrefix;

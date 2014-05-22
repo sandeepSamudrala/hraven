@@ -106,9 +106,9 @@ public class JobKey extends FlowKey implements Comparable<Object>{
    * @see java.lang.Object#toString()
    */
   public String toString() {
-    return getCluster() + Constants.HBASE_SEP + this.userName + Constants.HBASE_SEP
-        + this.appId + Constants.HBASE_SEP + this.getRunId()
-        + Constants.HBASE_SEP + this.jobId.getJobIdString();
+    return getCluster() + Constants.SEP + this.userName + Constants.SEP
+        + this.appId + Constants.SEP + this.getRunId()
+        + Constants.SEP + this.jobId.getJobIdString();
   }
 
   /**

@@ -84,7 +84,7 @@ public class JobFileProcessor extends Configured implements Tool {
       .format(new Date(System.currentTimeMillis()));
 
   private final AtomicInteger jobCounter = new AtomicInteger(0);
-  private ArrayList<Sink> sinks;
+  private List<Sink> sinks;
 
   /**
    * Maximum number of files to process in one batch.
@@ -184,7 +184,7 @@ public class JobFileProcessor extends Configured implements Tool {
     o.setRequired(true);
     options.addOption(o);
     
-    o = new Option("s", "sinks", false, "Comma seperated list of sinks (currently supported sinks: hbase, graphite)");
+    o = new Option("s", "sinks", true, "Comma seperated list of sinks (currently supported sinks: hbase, graphite)");
     o.setArgName("sinks");
     o.setRequired(true);
     options.addOption(o);
@@ -229,7 +229,7 @@ public class JobFileProcessor extends Configured implements Tool {
     //Should we send data to graphite?
     
     this.sinks =
-        (ArrayList<Sink>) Collections2.transform(
+        new ArrayList<Sink>(Collections2.transform(
           Arrays.asList(commandLine.getOptionValue("s").split(",")), new Function<String, Sink>() {
 
             @Override
@@ -237,7 +237,7 @@ public class JobFileProcessor extends Configured implements Tool {
             public Sink apply(@Nullable String input) {
               return Sink.valueOf(input);
             }
-          });
+          }));
     
     LOG.info("send data to sink=" + this.sinks.toString());
     		
@@ -390,7 +390,7 @@ public class JobFileProcessor extends Configured implements Tool {
 
     boolean success = runJobs(threadCount, jobRunners);
     if (success) {
-      //TODO: remove this updateProcessRecords(conf, processRecords);
+      updateProcessRecords(conf, processRecords);
     }
 
     return success;
@@ -626,10 +626,10 @@ public class JobFileProcessor extends Configured implements Tool {
   }
 
   static String convertScanToString(Scan scan) throws IOException {
-	ByteArrayOutputStream out = new ByteArrayOutputStream();
-	DataOutputStream dos = new DataOutputStream(out);
-	scan.write(dos);
-	return Base64.encodeBytes(out.toByteArray());
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    DataOutputStream dos = new DataOutputStream(out);
+    scan.write(dos);
+    return Base64.encodeBytes(out.toByteArray());
   }
  
   /**

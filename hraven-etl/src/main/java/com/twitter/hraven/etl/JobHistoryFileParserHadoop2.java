@@ -665,14 +665,14 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
       case TOTAL_COUNTERS:
       case TASK_COUNTERS:
       case TASK_ATTEMPT_COUNTERS:
-        counterPrefix = Bytes.add(Constants.COUNTER_COLUMN_PREFIX_BYTES, Constants.HBASE_SEP_BYTES);
+        counterPrefix = Bytes.add(Constants.COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
         break;
       case MAP_COUNTERS:
-        counterPrefix = Bytes.add(Constants.MAP_COUNTER_COLUMN_PREFIX_BYTES, Constants.HBASE_SEP_BYTES);
+        counterPrefix = Bytes.add(Constants.MAP_COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
         break;
       case REDUCE_COUNTERS:
         counterPrefix =
-            Bytes.add(Constants.REDUCE_COUNTER_COLUMN_PREFIX_BYTES, Constants.HBASE_SEP_BYTES);
+            Bytes.add(Constants.REDUCE_COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
         break;
       default:
         throw new IllegalArgumentException("Unknown counter type " + key.toString());
@@ -683,7 +683,7 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
       throw new ProcessingException("Null counter type " + key, npe);
     }
 
-    byte[] groupPrefix = Bytes.add(counterPrefix, Bytes.toBytes(groupName), Constants.HBASE_SEP_BYTES);
+    byte[] groupPrefix = Bytes.add(counterPrefix, Bytes.toBytes(groupName), Constants.SEP_BYTES);
     byte[] qualifier = Bytes.add(groupPrefix, Bytes.toBytes(counterName));
 
     /**
