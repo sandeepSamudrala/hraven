@@ -694,10 +694,12 @@ public class JobHistoryService {
 
     // Add all columns to one put
     JobHistoryMultiRecord record = new JobHistoryMultiRecord(jobKey);
-    
-    record.add(RecordCategory.CONF_META, new RecordDataKey(Constants.VERSION_COLUMN), jobDesc.getVersion());
-    record.add(RecordCategory.CONF_META, new RecordDataKey(Constants.FRAMEWORK_COLUMN), jobDesc.getFramework().toString());
-    
+
+    record.add(RecordCategory.CONF_META, new RecordDataKey(Constants.VERSION_COLUMN),
+      jobDesc.getVersion());
+    record.add(RecordCategory.CONF_META, new RecordDataKey(Constants.FRAMEWORK_COLUMN), jobDesc
+        .getFramework().toString());
+
     // Create records for all the parameters in the job configuration
     Iterator<Entry<String, String>> jobConfIterator = jobConf.iterator();
     while (jobConfIterator.hasNext()) {

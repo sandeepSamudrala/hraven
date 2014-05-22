@@ -226,8 +226,6 @@ public class JobFileProcessor extends Configured implements Tool {
     // Grab the arguments we're looking for.
     CommandLine commandLine = parseArgs(otherArgs);
 
-    //Should we send data to graphite?
-    
     this.sinks =
         new ArrayList<Sink>(Collections2.transform(
           Arrays.asList(commandLine.getOptionValue("s").split(",")), new Function<String, Sink>() {
@@ -238,7 +236,7 @@ public class JobFileProcessor extends Configured implements Tool {
               return Sink.valueOf(input);
             }
           }));
-    
+
     LOG.info("send data to sink=" + this.sinks.toString());
     		
     // Grab the cluster argument

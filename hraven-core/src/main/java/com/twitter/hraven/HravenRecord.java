@@ -13,54 +13,54 @@ import com.google.protobuf.DescriptorProtos.FieldDescriptorProto.Type;
  * @param <V> type of dataValue object to be stored
  */
 
-public abstract class HravenRecord<K,V> {
-	private K key;
-	private RecordCategory dataCategory;
-	private RecordDataKey dataKey;
-	private V dataValue;
-	private long submitTime;
-	
-	public HravenRecord() {
-		
-	}
+public abstract class HravenRecord<K, V> {
+  private K key;
+  private RecordCategory dataCategory;
+  private RecordDataKey dataKey;
+  private V dataValue;
+  private long submitTime;
 
-	public K getKey() {
-		return key;
-	}
+  public HravenRecord() {
 
-	public void setKey(K key) {
-		this.key = key;
-	}
+  }
 
-	public RecordCategory getDataCategory() {
-		return dataCategory;
-	}
+  public K getKey() {
+    return key;
+  }
 
-	public void setDataCategory(RecordCategory dataCategory) {
-		this.dataCategory = dataCategory;
-	}
+  public void setKey(K key) {
+    this.key = key;
+  }
 
-	public RecordDataKey getDataKey() {
-		return dataKey;
-	}
+  public RecordCategory getDataCategory() {
+    return dataCategory;
+  }
 
-	public void setDataKey(RecordDataKey dataKey) {
-		this.dataKey = dataKey;
-	}
+  public void setDataCategory(RecordCategory dataCategory) {
+    this.dataCategory = dataCategory;
+  }
 
-	public V getDataValue() {
-		return dataValue;
-	}
+  public RecordDataKey getDataKey() {
+    return dataKey;
+  }
 
-	public void setDataValue(V dataValue) {
-		this.dataValue = dataValue;
-	}
+  public void setDataKey(RecordDataKey dataKey) {
+    this.dataKey = dataKey;
+  }
 
-	public long getSubmitTime() {
-		return submitTime;
-	}
+  public V getDataValue() {
+    return dataValue;
+  }
 
-	public void setSubmitTime(long submitTime) {
+  public void setDataValue(V dataValue) {
+    this.dataValue = dataValue;
+  }
+
+  public long getSubmitTime() {
+    return submitTime;
+  }
+
+  public void setSubmitTime(long submitTime) {
     this.submitTime = submitTime;
   }
 }

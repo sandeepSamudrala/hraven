@@ -26,18 +26,14 @@ import com.twitter.hraven.JobKey;
 import com.twitter.hraven.RecordCategory;
 
 /**
- * 
- * @author angad.singh
- *
- * {@link OutputFormat} for sending metrics to graphite
- * 
+ * @author angad.singh {@link OutputFormat} for sending metrics to graphite
  */
 
 public class GraphiteOutputFormat extends OutputFormat<HravenService, HravenRecord> {
 
   private static Log LOG = LogFactory.getLog(GraphiteOutputFormat.class);
   private static Writer writer;
-  
+
   /**
    * {@link OutputCommitter} required to flush the writer
    */
@@ -87,31 +83,31 @@ public class GraphiteOutputFormat extends OutputFormat<HravenService, HravenReco
         throw new IOException("Error connecting to graphite, " + host + ":" + port, e);
       }
     }
-    
+
     /**
-     * Split a {@link JobHistoryMultiRecord} into {@link JobHistoryRecord}s
-     * and call the {@link #writeRecord(HravenService, JobHistoryRecord)} method
+     * Split a {@link JobHistoryMultiRecord} into {@link JobHistoryRecord}s and call the
+     * {@link #writeRecord(HravenService, JobHistoryRecord)} method
      */
-    
+
     @Override
     public void write(HravenService serviceKey, HravenRecord value) throws IOException,
         InterruptedException {
       JobHistoryMultiRecord records;
-      
+
       if (value instanceof JobHistoryMultiRecord) {
         records = (JobHistoryMultiRecord) value;
       } else {
-        records = new JobHistoryMultiRecord((JobHistoryRecord)value);
+        records = new JobHistoryMultiRecord((JobHistoryRecord) value);
       }
-      
+
       String output = null;
-      
+
       try {
-        output = new GraphiteHistoryWriter(METRIC_PREFIX, serviceKey, records).getOutput();  
+        output = new GraphiteHistoryWriter(METRIC_PREFIX, serviceKey, records).getOutput();
       } catch (Exception e) {
         LOG.error("Error generating metrics for graphite", e);
       }
-      
+
       try {
         LOG.debug("SendToGraphite:" + records.getKey().toString() + "\n" + output);
         writer.write(output);
@@ -120,7 +116,7 @@ public class GraphiteOutputFormat extends OutputFormat<HravenService, HravenReco
         throw new IOException("Error sending metrics", e);
       }
     }
-    
+
     @Override
     public void close(TaskAttemptContext context) throws IOException, InterruptedException {
       try {
@@ -130,10 +126,9 @@ public class GraphiteOutputFormat extends OutputFormat<HravenService, HravenReco
         throw new IOException("Error flush metrics to graphite", e);
       }
     }
-    
 
   }
-  
+
   @Override
   public void checkOutputSpecs(JobContext arg0) throws IOException, InterruptedException {
   }
@@ -151,10 +146,10 @@ public class GraphiteOutputFormat extends OutputFormat<HravenService, HravenReco
   public RecordWriter<HravenService, HravenRecord> getRecordWriter(TaskAttemptContext context)
       throws IOException, InterruptedException {
     Configuration conf = context.getConfiguration();
-    return new GraphiteRecordWriter(
-            conf.get(Constants.JOBCONF_GRAPHITE_HOST_KEY, Constants.GRAPHITE_DEFAULT_HOST),
-            conf.getInt(Constants.JOBCONF_GRAPHITE_PORT_KEY, Constants.GRAPHITE_DEFAULT_PORT),
-            conf.get(Constants.JOBCONF_GRAPHITE_PREFIX, Constants.GRAPHITE_DEFAULT_PREFIX));
+    return new GraphiteRecordWriter(conf.get(Constants.JOBCONF_GRAPHITE_HOST_KEY,
+      Constants.GRAPHITE_DEFAULT_HOST), conf.getInt(Constants.JOBCONF_GRAPHITE_PORT_KEY,
+      Constants.GRAPHITE_DEFAULT_PORT), conf.get(Constants.JOBCONF_GRAPHITE_PREFIX,
+      Constants.GRAPHITE_DEFAULT_PREFIX));
   }
 
 }

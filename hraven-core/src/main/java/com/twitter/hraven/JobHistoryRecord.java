@@ -1,11 +1,8 @@
 package com.twitter.hraven;
 
 /**
- * 
- * @author angad.singh
- * 
- * Abstraction of a record to be stored in the {@link HravenService#JOB_HISTORY} service.
- * Was earlier directly written as an Hbase put
+ * @author angad.singh Abstraction of a record to be stored in the {@link HravenService#JOB_HISTORY}
+ *         service. Was earlier directly written as an Hbase put
  */
 
 public class JobHistoryRecord extends HravenRecord<JobKey, Object> {

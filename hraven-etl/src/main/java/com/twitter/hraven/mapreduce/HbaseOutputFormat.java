@@ -28,10 +28,9 @@ import com.twitter.hraven.datasource.JobKeyConverter;
 import com.twitter.hraven.datasource.TaskKeyConverter;
 
 /**
- * 
- * @author angad.singh
- * Wrapper around Hbase's {@link MultiTableOutputFormat} Converts {@link HravenRecords} to Hbase {@link Put}s and writes
- * them to {@link HTable}s corresponding to {@link HravenService}
+ * @author angad.singh Wrapper around Hbase's {@link MultiTableOutputFormat} Converts
+ *         {@link HravenRecords} to Hbase {@link Put}s and writes them to {@link HTable}s
+ *         corresponding to {@link HravenService}
  */
 
 public class HbaseOutputFormat extends OutputFormat<HravenService, HravenRecord> {
@@ -46,7 +45,6 @@ public class HbaseOutputFormat extends OutputFormat<HravenService, HravenRecord>
 
     /**
      * Writes a single {@link JobHistoryRecord} to the specified {@link HravenService}
-     * 
      * @param serviceKey
      * @param jobRecord
      * @throws IOException
@@ -73,12 +71,11 @@ public class HbaseOutputFormat extends OutputFormat<HravenService, HravenRecord>
       recordWriter.write(table, put);
     }
 
-
     /**
-     * Split a {@link JobHistoryMultiRecord} into {@link JobHistoryRecord}s
-     * and call the {@link #writeRecord(HravenService, JobHistoryRecord)} method
+     * Split a {@link JobHistoryMultiRecord} into {@link JobHistoryRecord}s and call the
+     * {@link #writeRecord(HravenService, JobHistoryRecord)} method
      */
-    
+
     @Override
     public void write(HravenService serviceKey, HravenRecord value) throws IOException,
         InterruptedException {

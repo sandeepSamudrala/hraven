@@ -6,12 +6,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 /**
- * 
- * @author angad.singh
- *
- * Store multiple {@link JobHistoryRecord}s in a 2 level HashMap
- * 
- * Supports iteration to get individual {@link JobHistoryRecord}s
+ * @author angad.singh Store multiple {@link JobHistoryRecord}s in a 2 level HashMap Supports
+ *         iteration to get individual {@link JobHistoryRecord}s
  */
 
 public class JobHistoryMultiRecord extends HravenRecord<JobKey, Object> implements
@@ -69,7 +65,7 @@ public class JobHistoryMultiRecord extends HravenRecord<JobKey, Object> implemen
   /**
    * Be able to iterate easily to get individual {@link JobHistoryRecord}s
    */
-  
+
   @Override
   public Iterator<JobHistoryRecord> iterator() {
 
@@ -86,20 +82,20 @@ public class JobHistoryMultiRecord extends HravenRecord<JobKey, Object> implemen
 
       private void initIterators() {
         if (catIterator == null) {
-          catIterator = valueMap.entrySet().iterator();  
+          catIterator = valueMap.entrySet().iterator();
         }
-        
+
         if (catIterator.hasNext()) {
           nextCat = catIterator.next();
-          dataIterator = nextCat.getValue().entrySet().iterator();  
+          dataIterator = nextCat.getValue().entrySet().iterator();
         }
       }
-      
+
       @Override
       public boolean hasNext() {
         if (dataIterator == null) {
           initIterators();
-        }        
+        }
         return dataIterator == null ? false : dataIterator.hasNext() || catIterator.hasNext();
       }
 
@@ -125,7 +121,7 @@ public class JobHistoryMultiRecord extends HravenRecord<JobKey, Object> implemen
   }
 
   public void mergeWith(JobHistoryMultiRecord confRecord) {
-    for (JobHistoryRecord record: confRecord) {
+    for (JobHistoryRecord record : confRecord) {
       add(record);
     }
   }
