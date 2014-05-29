@@ -30,7 +30,7 @@ import org.junit.Test;
 
 import com.google.common.io.Files;
 import com.twitter.hraven.Constants;
-import com.twitter.hraven.JobHistoryMultiRecord;
+import com.twitter.hraven.JobHistoryRecordCollection;
 import com.twitter.hraven.JobHistoryRecord;
 import com.twitter.hraven.JobKey;
 
@@ -64,9 +64,9 @@ public class TestJobHistoryFileParserHadoop1 {
     assertTrue(historyFileParser instanceof JobHistoryFileParserHadoop1);
 
     JobKey jobKey = new JobKey("cluster1", "user1", "Sleep", 1, "job_201311192236_3583");
-    historyFileParser.parse(contents, jobKey);
+    historyFileParser.parse(contents, jobKey, true);
 
-    JobHistoryMultiRecord jobRecords = historyFileParser.getJobRecords();
+    JobHistoryRecordCollection jobRecords = (JobHistoryRecordCollection)historyFileParser.getJobRecords();
     assertNotNull(jobRecords);
 
     Long mbMillis = historyFileParser.getMegaByteMillis();

@@ -40,7 +40,7 @@ import com.twitter.hraven.Flow;
 import com.twitter.hraven.GenerateFlowTestData;
 import com.twitter.hraven.HadoopVersion;
 import com.twitter.hraven.JobDetails;
-import com.twitter.hraven.JobHistoryMultiRecord;
+import com.twitter.hraven.JobHistoryRecordCollection;
 import com.twitter.hraven.JobHistoryRecord;
 import com.twitter.hraven.JobKey;
 import com.twitter.hraven.RecordCategory;
@@ -328,15 +328,15 @@ public class TestJobHistoryService {
 	  JobKey jobKey = new JobKey("cluster1", USERNAME, "Sleep", 1,
 			  "job_1329348432655_0001");
 	  
-	  JobHistoryMultiRecord record = new JobHistoryMultiRecord(jobKey);
+	  JobHistoryRecordCollection recordCollection = new JobHistoryRecordCollection(jobKey);
 
-	  assertEquals(record.size(), 0);
+	  assertEquals(recordCollection.size(), 0);
 
 	  // check queuename matches user name since the conf has
 	  // value "default" as the queuename
-	  JobHistoryService.setHravenQueueNameRecord(jobConf, record, jobKey);
-	  assertEquals(record.size(), 1);
-	  assertEquals(record.getValue(RecordCategory.CONF_META, new RecordDataKey(
+	  JobHistoryService.setHravenQueueNameRecord(jobConf, recordCollection, jobKey);
+	  assertEquals(recordCollection.size(), 1);
+	  assertEquals(recordCollection.getValue(RecordCategory.CONF_META, new RecordDataKey(
 				Constants.HRAVEN_QUEUE)), USERNAME);
 
 	  // populate the jobConf with all types of queue name parameters
@@ -349,38 +349,38 @@ public class TestJobHistoryService {
 
 	  // now check queuename is correctly set as hadoop2 queue name
 	  // even when the fairscheduler and capacity scheduler are set
-	  record = new JobHistoryMultiRecord(jobKey);
-	  assertEquals(record.size(), 0);
-	  JobHistoryService.setHravenQueueNameRecord(jobConf, record, jobKey);
-	  assertEquals(record.size(), 1);
-	  assertEquals(record.getValue(RecordCategory.CONF_META, new RecordDataKey(
+	  recordCollection = new JobHistoryRecordCollection(jobKey);
+	  assertEquals(recordCollection.size(), 0);
+	  JobHistoryService.setHravenQueueNameRecord(jobConf, recordCollection, jobKey);
+	  assertEquals(recordCollection.size(), 1);
+	  assertEquals(recordCollection.getValue(RecordCategory.CONF_META, new RecordDataKey(
 				Constants.HRAVEN_QUEUE)), expH2QName);
 
 	  // now unset hadoop2 queuename, expect fairscheduler name to be used as queuename
 	  jobConf.set(Constants.QUEUENAME_HADOOP2, "");
-	  record = new JobHistoryMultiRecord(jobKey);
-	  assertEquals(record.size(), 0);
-	  JobHistoryService.setHravenQueueNameRecord(jobConf, record, jobKey);
-	  assertEquals(record.size(), 1);
-	  assertEquals(record.getValue(RecordCategory.CONF_META, new RecordDataKey(
+	  recordCollection = new JobHistoryRecordCollection(jobKey);
+	  assertEquals(recordCollection.size(), 0);
+	  JobHistoryService.setHravenQueueNameRecord(jobConf, recordCollection, jobKey);
+	  assertEquals(recordCollection.size(), 1);
+	  assertEquals(recordCollection.getValue(RecordCategory.CONF_META, new RecordDataKey(
 				Constants.HRAVEN_QUEUE)), expH1PoolName);
 
 	  // now unset fairscheduler name, expect capacity scheduler to be used as queuename
 	  jobConf.set(Constants.FAIR_SCHEDULER_POOLNAME_HADOOP1, "");
-	  record = new JobHistoryMultiRecord(jobKey);
-	  assertEquals(record.size(), 0);
-	  JobHistoryService.setHravenQueueNameRecord(jobConf, record, jobKey);
-	  assertEquals(record.size(), 1);
-	  assertEquals(record.getValue(RecordCategory.CONF_META, new RecordDataKey(
+	  recordCollection = new JobHistoryRecordCollection(jobKey);
+	  assertEquals(recordCollection.size(), 0);
+	  JobHistoryService.setHravenQueueNameRecord(jobConf, recordCollection, jobKey);
+	  assertEquals(recordCollection.size(), 1);
+	  assertEquals(recordCollection.getValue(RecordCategory.CONF_META, new RecordDataKey(
 				Constants.HRAVEN_QUEUE)), capacityH1QName);
 
 	  // now unset capacity scheduler, expect default_queue to be used as queuename
 	  jobConf.set(Constants.CAPACITY_SCHEDULER_QUEUENAME_HADOOP1, "");
-	  record = new JobHistoryMultiRecord(jobKey);
-	  assertEquals(record.size(), 0);
-	  JobHistoryService.setHravenQueueNameRecord(jobConf, record, jobKey);
-	  assertEquals(record.size(), 1);
-	  assertEquals(record.getValue(RecordCategory.CONF_META, new RecordDataKey(
+	  recordCollection = new JobHistoryRecordCollection(jobKey);
+	  assertEquals(recordCollection.size(), 0);
+	  JobHistoryService.setHravenQueueNameRecord(jobConf, recordCollection, jobKey);
+	  assertEquals(recordCollection.size(), 1);
+	  assertEquals(recordCollection.getValue(RecordCategory.CONF_META, new RecordDataKey(
 				Constants.HRAVEN_QUEUE)), Constants.DEFAULT_QUEUENAME);
   }
 

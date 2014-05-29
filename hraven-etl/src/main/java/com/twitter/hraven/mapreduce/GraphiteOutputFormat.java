@@ -1,13 +1,18 @@
 package com.twitter.hraven.mapreduce;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.Socket;
 import java.net.URLEncoder;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -20,7 +25,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import com.twitter.hraven.Constants;
 import com.twitter.hraven.HravenRecord;
 import com.twitter.hraven.HravenService;
-import com.twitter.hraven.JobHistoryMultiRecord;
+import com.twitter.hraven.JobHistoryRecordCollection;
 import com.twitter.hraven.JobHistoryRecord;
 import com.twitter.hraven.JobKey;
 import com.twitter.hraven.RecordCategory;
@@ -35,7 +40,7 @@ public class GraphiteOutputFormat extends OutputFormat<HravenService, HravenReco
   private static Writer writer;
 
   /**
-   * {@link OutputCommitter} required to flush the writer
+   * {@link OutputCommitter} which does nothing
    */
   protected static class GraphiteOutputCommitter extends OutputCommitter {
 
@@ -54,12 +59,6 @@ public class GraphiteOutputFormat extends OutputFormat<HravenService, HravenReco
 
     @Override
     public void commitTask(TaskAttemptContext taskContext) throws IOException {
-      try {
-        LOG.debug("flushing records");
-        writer.flush();
-      } catch (Exception e) {
-        throw new IOException("Error flush metrics to graphite", e);
-      }
     }
 
     @Override
@@ -71,6 +70,7 @@ public class GraphiteOutputFormat extends OutputFormat<HravenService, HravenReco
   protected static class GraphiteRecordWriter extends RecordWriter<HravenService, HravenRecord> {
 
     private String METRIC_PREFIX;
+    private int outputCount = 0;
 
     public GraphiteRecordWriter(String host, int port, String prefix) throws IOException {
       METRIC_PREFIX = prefix;
@@ -85,42 +85,47 @@ public class GraphiteOutputFormat extends OutputFormat<HravenService, HravenReco
     }
 
     /**
-     * Split a {@link JobHistoryMultiRecord} into {@link JobHistoryRecord}s and call the
+     * Split a {@link JobHistoryRecordCollection} into {@link JobHistoryRecord}s and call the
      * {@link #writeRecord(HravenService, JobHistoryRecord)} method
      */
 
     @Override
     public void write(HravenService serviceKey, HravenRecord value) throws IOException,
         InterruptedException {
-      JobHistoryMultiRecord records;
+      JobHistoryRecordCollection recordCollection;
 
-      if (value instanceof JobHistoryMultiRecord) {
-        records = (JobHistoryMultiRecord) value;
+      if (value instanceof JobHistoryRecordCollection) {
+        recordCollection = (JobHistoryRecordCollection) value;
       } else {
-        records = new JobHistoryMultiRecord((JobHistoryRecord) value);
+        recordCollection = new JobHistoryRecordCollection((JobHistoryRecord) value);
       }
 
-      String output = null;
+      StringBuilder output = new StringBuilder();
+      int lines = 0;
 
       try {
-        output = new GraphiteHistoryWriter(METRIC_PREFIX, serviceKey, records).getOutput();
+        GraphiteHistoryWriter graphiteWriter = new GraphiteHistoryWriter(METRIC_PREFIX, serviceKey, recordCollection, output);
+        lines = graphiteWriter.write();
       } catch (Exception e) {
         LOG.error("Error generating metrics for graphite", e);
       }
 
-      try {
-        LOG.debug("SendToGraphite:" + records.getKey().toString() + "\n" + output);
-        writer.write(output);
-      } catch (Exception e) {
-        LOG.error("Error sending metrics to graphite", e);
-        throw new IOException("Error sending metrics", e);
+      if (output.length() > 0) {
+        
+        try {
+          LOG.info("SendToGraphite:" + recordCollection.getKey().toString() + lines + " lines");
+          writer.write(output.toString());
+        } catch (Exception e) {
+          LOG.error("Error sending metrics to graphite", e);
+          throw new IOException("Error sending metrics", e);
+        }  
       }
     }
 
     @Override
     public void close(TaskAttemptContext context) throws IOException, InterruptedException {
       try {
-        LOG.debug("flushing records and closing writer");
+        LOG.info("flushing records and closing writer");
         writer.close();
       } catch (Exception e) {
         throw new IOException("Error flush metrics to graphite", e);

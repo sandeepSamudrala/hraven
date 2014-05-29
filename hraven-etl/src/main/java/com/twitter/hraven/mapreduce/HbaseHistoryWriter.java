@@ -1,52 +1,68 @@
 package com.twitter.hraven.mapreduce;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 import com.twitter.hraven.Constants;
 import com.twitter.hraven.HravenRecord;
 import com.twitter.hraven.JobHistoryKeys;
+import com.twitter.hraven.JobHistoryRecord;
 import com.twitter.hraven.RecordCategory;
 
-public class JobHistoryHbaseConverter {
+public class HbaseHistoryWriter {
+  private static Log LOG = LogFactory.getLog(HbaseHistoryWriter.class);
+  
   public static void addHistoryPuts(HravenRecord record, Put p) {
     byte[] family = Constants.INFO_FAM_BYTES;
 
-    JobHistoryKeys key = null;
-    if (record.getDataKey() != null && record.getDataKey().get(0) != null) key =
-        JobHistoryKeys.valueOf(record.getDataKey().get(0));
-
-    if (key == null) {
-      // some keys other than JobHistoryKeys were added by
-      // JobHistoryListener
-      byte[] qualifier = null;
-
-      if (record.getDataCategory() == RecordCategory.CONF
-          || record.getDataKey().get(0).equals(Constants.HRAVEN_QUEUE)) {
-        byte[] jobConfColumnPrefix =
-            Bytes.toBytes(Constants.JOB_CONF_COLUMN_PREFIX + Constants.SEP_BYTES);
-        qualifier = Bytes.add(jobConfColumnPrefix, Bytes.toBytes(key.toString()));
-      } else {
-        qualifier = Bytes.toBytes(key.toString().toLowerCase());
+    JobHistoryKeys dataKey = null;
+    if (record.getDataKey() != null && record.getDataKey().get(0) != null)
+      try {
+        dataKey = JobHistoryKeys.valueOf(record.getDataKey().get(0));        
+      } catch (IllegalArgumentException e) {
+        // some keys other than JobHistoryKeys were added by
+        // JobHistoryListener. Ignore this exception.
       }
 
-      byte[] valueBytes = Bytes.toBytes((String) record.getDataValue());
+    if (dataKey == null) {
+      byte[] qualifier = null;
+      if (record.getDataCategory() == RecordCategory.CONF) {
+        byte[] jobConfColumnPrefix =
+            Bytes.add(Constants.JOB_CONF_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
+        qualifier = Bytes.add(jobConfColumnPrefix, Bytes.toBytes(record.getDataKey().toString()));
+      } else {
+        qualifier = Bytes.toBytes(record.getDataKey().toString().toLowerCase());
+      }
+
+      byte[] valueBytes = null;
+      
+      if (record.getDataValue() instanceof Long) {
+        valueBytes = Bytes.toBytes((Long)record.getDataValue());
+      } else if (record.getDataValue() instanceof Double) {
+        valueBytes = Bytes.toBytes((Double)record.getDataValue());
+      } else {
+        valueBytes = Bytes.toBytes(record.getDataValue().toString());
+      }
+      
+      Bytes.toBytes(record.getDataValue().toString());
       p.add(family, qualifier, valueBytes);
-    } else if (key == JobHistoryKeys.COUNTERS || key == JobHistoryKeys.MAP_COUNTERS
-        || key == JobHistoryKeys.REDUCE_COUNTERS) {
+    } else if (dataKey == JobHistoryKeys.COUNTERS || dataKey == JobHistoryKeys.MAP_COUNTERS
+        || dataKey == JobHistoryKeys.REDUCE_COUNTERS) {
 
       String group = record.getDataKey().get(1);
       String counterName = record.getDataKey().get(2);
       byte[] counterPrefix = null;
 
-      if (key == JobHistoryKeys.COUNTERS) {
+      if (dataKey == JobHistoryKeys.COUNTERS) {
         counterPrefix = Bytes.add(Constants.COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
-      } else if (key == JobHistoryKeys.MAP_COUNTERS) {
+      } else if (dataKey == JobHistoryKeys.MAP_COUNTERS) {
         counterPrefix = Bytes.add(Constants.MAP_COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
-      } else if (key == JobHistoryKeys.REDUCE_COUNTERS) {
+      } else if (dataKey == JobHistoryKeys.REDUCE_COUNTERS) {
         counterPrefix =
             Bytes.add(Constants.REDUCE_COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
       } else {
-        throw new IllegalArgumentException("Unknown counter type " + key.toString());
+        throw new IllegalArgumentException("Unknown counter type " + dataKey.toString());
       }
 
       byte[] groupPrefix = Bytes.add(counterPrefix, Bytes.toBytes(group), Constants.SEP_BYTES);
@@ -55,7 +71,7 @@ public class JobHistoryHbaseConverter {
       p.add(family, qualifier, Bytes.toBytes((Long) record.getDataValue()));
     } else {
       @SuppressWarnings("rawtypes")
-      Class clazz = JobHistoryKeys.KEY_TYPES.get(key);
+      Class clazz = JobHistoryKeys.KEY_TYPES.get(dataKey);
       byte[] valueBytes = null;
 
       if (Integer.class.equals(clazz)) {
@@ -70,7 +86,7 @@ public class JobHistoryHbaseConverter {
         // keep the string representation by default
         valueBytes = Bytes.toBytes((String) record.getDataValue());
       }
-      byte[] qualifier = Bytes.toBytes(key.toString().toLowerCase());
+      byte[] qualifier = Bytes.toBytes(dataKey.toString().toLowerCase());
       p.add(family, qualifier, valueBytes);
     }
   }

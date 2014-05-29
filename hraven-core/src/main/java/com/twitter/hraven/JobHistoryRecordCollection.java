@@ -1,5 +1,6 @@
 package com.twitter.hraven;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -10,28 +11,28 @@ import java.util.Map.Entry;
  *         iteration to get individual {@link JobHistoryRecord}s
  */
 
-public class JobHistoryMultiRecord extends HravenRecord<JobKey, Object> implements
-    Iterable<JobHistoryRecord> {
+public class JobHistoryRecordCollection extends HravenRecord<JobKey, Object> implements
+    Collection<JobHistoryRecord> {
 
   private Map<RecordCategory, Map<RecordDataKey, Object>> valueMap;
 
-  public JobHistoryMultiRecord() {
+  public JobHistoryRecordCollection() {
     valueMap = new HashMap<RecordCategory, Map<RecordDataKey, Object>>();
   }
 
-  public JobHistoryMultiRecord(JobKey jobKey) {
+  public JobHistoryRecordCollection(JobKey jobKey) {
     setKey(jobKey);
     valueMap = new HashMap<RecordCategory, Map<RecordDataKey, Object>>();
   }
 
-  public JobHistoryMultiRecord(JobHistoryRecord record) {
+  public JobHistoryRecordCollection(JobHistoryRecord record) {
     valueMap = new HashMap<RecordCategory, Map<RecordDataKey, Object>>();
     setKey(record.getKey());
     setSubmitTime(record.getSubmitTime());
     add(record);
   }
 
-  public void add(RecordCategory category, RecordDataKey key, Object value) {
+  public boolean add(RecordCategory category, RecordDataKey key, Object value) {
     if (valueMap.containsKey(category)) {
       valueMap.get(category).put(key, value);
     } else {
@@ -39,10 +40,12 @@ public class JobHistoryMultiRecord extends HravenRecord<JobKey, Object> implemen
       valueMap.put(category, categoryMap);
       categoryMap.put(key, value);
     }
+    
+    return true;
   }
 
-  public void add(JobHistoryRecord record) {
-    add(record.getDataCategory(), record.getDataKey(), record.getDataValue());
+  public boolean add(JobHistoryRecord record) {
+    return add(record.getDataCategory(), record.getDataKey(), record.getDataValue());
   }
 
   public Map<RecordCategory, Map<RecordDataKey, Object>> getValueMap() {
@@ -120,9 +123,98 @@ public class JobHistoryMultiRecord extends HravenRecord<JobKey, Object> implemen
     };
   }
 
-  public void mergeWith(JobHistoryMultiRecord confRecord) {
+  public void mergeWith(JobHistoryRecordCollection confRecord) {
     for (JobHistoryRecord record : confRecord) {
       add(record);
     }
+  }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = super.hashCode();
+    result = prime * result + ((valueMap == null) ? 0 : valueMap.hashCode());
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (!super.equals(obj)) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    JobHistoryRecordCollection other = (JobHistoryRecordCollection) obj;
+    if (valueMap == null) {
+      if (other.valueMap != null) {
+        return false;
+      }
+    } else if (!valueMap.equals(other.valueMap)) {
+      return false;
+    }
+    return true;
+  }
+
+  @Override
+  public String toString() {
+    return "JobHistoryRecordCollection [key=" + getKey() + ", dataCategory=" + getDataCategory() + ", dataKey=" + getDataKey()
+        + ", dataValue=" + getDataValue() + ", submitTime=" + getSubmitTime() + ", valueMap=" + valueMap + "]";
+  }
+
+  @Override
+  public boolean isEmpty() {
+    return valueMap.isEmpty();
+  }
+
+  @Override
+  public boolean contains(Object o) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Object[] toArray() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public <T> T[] toArray(T[] a) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean remove(Object o) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean containsAll(Collection<?> c) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean addAll(Collection<? extends JobHistoryRecord> recordCol) {
+    for (JobHistoryRecord record : recordCol) {
+      add(record);
+    }
+    return true;
+  }
+
+  @Override
+  public boolean removeAll(Collection<?> c) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean retainAll(Collection<?> c) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void clear() {
+    this.valueMap = null;
   }
 }

@@ -184,9 +184,16 @@ public class JobFileProcessor extends Configured implements Tool {
     o.setRequired(true);
     options.addOption(o);
     
+    // Sinks
     o = new Option("s", "sinks", true, "Comma seperated list of sinks (currently supported sinks: hbase, graphite)");
     o.setArgName("sinks");
     o.setRequired(true);
+    options.addOption(o);
+    
+    // Toggle processing of task history
+    o = new Option("tt", "processtasks", true, "Toggle processing of task history data on/off");
+    o.setArgName("processtasks");
+    o.setRequired(false);
     options.addOption(o);
 
     CommandLineParser parser = new PosixParser();
@@ -226,16 +233,30 @@ public class JobFileProcessor extends Configured implements Tool {
     // Grab the arguments we're looking for.
     CommandLine commandLine = parseArgs(otherArgs);
 
-    this.sinks =
-        new ArrayList<Sink>(Collections2.transform(
-          Arrays.asList(commandLine.getOptionValue("s").split(",")), new Function<String, Sink>() {
+    if (StringUtils.isNotBlank(commandLine.getOptionValue("s"))) {
+      String[] splits = commandLine.getOptionValue("s").split(",");
+      
+      if (splits.length > 0) {
+        sinks =
+            new ArrayList<Sink>(Collections2.transform(
+              Arrays.asList(splits), new Function<String, Sink>() {
 
-            @Override
-            @Nullable
-            public Sink apply(@Nullable String input) {
-              return Sink.valueOf(input);
-            }
-          }));
+                @Override
+                @Nullable
+                public Sink apply(@Nullable String input) {
+                  try {
+                    return Sink.valueOf(input);  
+                  } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("Sink '" + input + "' is incorrect.");
+                  }
+                }
+              }));  
+      }
+    }
+    
+    if (sinks == null) {
+      throw new IllegalArgumentException("Incorrect value for sinks. Provide a comma-seperated list of sinks");
+    }
 
     LOG.info("send data to sink=" + this.sinks.toString());
     		
@@ -322,6 +343,11 @@ public class JobFileProcessor extends Configured implements Tool {
     // Shove this into the jobConf so that we can get it out on the task side.
     hbaseConf.setStrings(Constants.CLUSTER_JOB_CONF_KEY, cluster);
 
+    //Whether or not to process task history data
+    if (commandLine.hasOption("tt")) {
+      hbaseConf.setStrings(Constants.JOBCONF_PROCESS_TASKHISTORY, commandLine.getOptionValue("tt"));
+    }
+    
     boolean success = false;
     if (reprocess) {
       success = reProcessRecords(hbaseConf, cluster, batchSize, threadCount);
@@ -499,7 +525,7 @@ public class JobFileProcessor extends Configured implements Tool {
       processRecords = processRecordService.getProcessRecords(cluster, LOADED,
           Integer.MAX_VALUE, processFileSubstring);
 
-      LOG.info("Processing " + processRecords.size() + " for: " + cluster);
+      LOG.info("Processing " + processRecords.size() + " processRecords for: " + cluster);
     } catch (IOException ioe) {
       caught = ioe;
     } finally {

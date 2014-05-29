@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 
@@ -47,8 +48,9 @@ import com.twitter.hraven.HravenRecord;
 import com.twitter.hraven.HravenService;
 import com.twitter.hraven.JobDesc;
 import com.twitter.hraven.JobDescFactory;
-import com.twitter.hraven.JobHistoryMultiRecord;
+import com.twitter.hraven.JobHistoryRecordCollection;
 import com.twitter.hraven.JobHistoryRecord;
+import com.twitter.hraven.JobHistoryTaskRecord;
 import com.twitter.hraven.JobKey;
 import com.twitter.hraven.QualifiedJobId;
 import com.twitter.hraven.RecordCategory;
@@ -115,6 +117,8 @@ public class JobFileTableMapper extends
 
   private long keyCount = 0;
 
+  private boolean processTasks;
+
   /**
    * @return the key class for the job output data.
    */
@@ -151,6 +155,10 @@ public class JobFileTableMapper extends
         }));
 
     mos = new MultipleOutputs<HravenService, HravenRecord>(context);
+    
+    if (context.getConfiguration().get(Constants.JOBCONF_PROCESS_TASKHISTORY) != null) {
+      processTasks = Boolean.parseBoolean(context.getConfiguration().get(Constants.JOBCONF_PROCESS_TASKHISTORY));
+    }
   }
 
   @Override
@@ -204,7 +212,6 @@ public class JobFileTableMapper extends
        * process and extract job xml/conf
        * 
        * **/
-      
       JobDesc jobDesc = JobDescFactory.createJobDesc(qualifiedJobId,
           submitTimeMillis, jobConf);
       JobKey jobKey = new JobKey(jobDesc);
@@ -215,7 +222,7 @@ public class JobFileTableMapper extends
           + " submitTimeMillis: " + submitTimeMillis;
       LOG.info(msg);
 
-      JobHistoryMultiRecord confRecord = JobHistoryService.getConfRecord(jobDesc, jobConf);
+      JobHistoryRecordCollection confRecordCollection = JobHistoryService.getConfRecord(jobDesc, jobConf);
 
       LOG.info("Sending JobConf records to "
           + HravenService.JOB_HISTORY + " service");
@@ -229,7 +236,7 @@ public class JobFileTableMapper extends
       // the Job.
 
       //1.1 Emit the records for job xml/conf/"JobDesc"
-      //Don't sink config seperately - merge with history and then sink
+      //Don't sink config seperately - merge with all other records and then sink
       //sink(HravenService.JOB_HISTORY, confRecord);
       context.progress();
 
@@ -270,39 +277,20 @@ public class JobFileTableMapper extends
       JobHistoryFileParser historyFileParser = JobHistoryFileParserFactory
     		  .createJobHistoryFileParser(historyFileContents, jobConf);
 
-      historyFileParser.parse(historyFileContents, jobKey);
+      historyFileParser.parse(historyFileContents, jobKey, processTasks);
       context.progress();
 
       //3.3: get and write job related data
-      JobHistoryMultiRecord jobHistoryRecords = historyFileParser.getJobRecords();
+      JobHistoryRecordCollection jobHistoryRecords = (JobHistoryRecordCollection) historyFileParser.getJobRecords();
       jobHistoryRecords.setSubmitTime(submitTimeMillis);
-      jobHistoryRecords.mergeWith(confRecord);
+      jobHistoryRecords.mergeWith(confRecordCollection);
       
-      if (jobHistoryRecords == null) {
-    	  throw new ProcessingException(
-    			  " Unable to get job history records for this job!" + jobKey);
-      }
       LOG.info("Sending " + jobHistoryRecords.size() + " Job history records to "
           + HravenService.JOB_HISTORY + " service");
-
-      sink(HravenService.JOB_HISTORY, jobHistoryRecords);
-      context.progress();
-
-      //3.4: get and write task related data
-      JobHistoryMultiRecord taskHistoryRecords = historyFileParser.getTaskRecords();
-      taskHistoryRecords.setSubmitTime(submitTimeMillis);
       
-      if (taskHistoryRecords == null) {
-    	  throw new ProcessingException(
-    			  " Unable to get task records for this job!" + jobKey);
-      }
-      LOG.info("Sending " + taskHistoryRecords.size() + " Task history records to "
-          + HravenService.JOB_HISTORY_TASK + " service");
-
-      sink(HravenService.JOB_HISTORY_TASK, taskHistoryRecords);
       context.progress();
 
-      //3.5: post processing steps on job records and job conf records
+      //3.4: post processing steps on job records and job conf records
       Long mbMillis = historyFileParser.getMegaByteMillis();
       context.progress();
       if (mbMillis == null) {
@@ -313,10 +301,10 @@ public class JobFileTableMapper extends
       JobHistoryRecord mbRecord = getMegaByteMillisRecord(mbMillis, jobKey);
       LOG.info("Send mega byte millis records to " + HravenService.JOB_HISTORY + " service");
       
-      sink(HravenService.JOB_HISTORY, mbRecord);
+      jobHistoryRecords.add(mbRecord);
       context.progress();
 
-      //3.6: post processing steps to get cost of the job */
+      //3.5: post processing steps to get cost of the job */
       Double jobCost = getJobCost(mbMillis, context.getConfiguration());
       context.progress();
       if (jobCost == null) {
@@ -325,7 +313,24 @@ public class JobFileTableMapper extends
       }
       JobHistoryRecord jobCostRecord = getJobCostRecord(jobCost, jobKey);
       LOG.info("Send jobCost records to " + HravenService.JOB_HISTORY + " service");
-      sink(HravenService.JOB_HISTORY, jobCostRecord);
+      jobHistoryRecords.add(jobCostRecord);
+      
+      //Sink the merged record
+      sink(HravenService.JOB_HISTORY, jobHistoryRecords);
+      context.progress();
+      
+      if (processTasks) {
+        //3.6: get and write task related data
+        ArrayList<JobHistoryTaskRecord> taskHistoryRecords = (ArrayList<JobHistoryTaskRecord>) historyFileParser.getTaskRecords();
+        
+        LOG.info("Sending " + taskHistoryRecords.size() + " Task history records to "
+            + HravenService.JOB_HISTORY_TASK + " service");
+
+        for (JobHistoryTaskRecord taskRecord: taskHistoryRecords) {
+          sink(HravenService.JOB_HISTORY_TASK, taskRecord);  
+        }
+      }
+      
       context.progress();
 
     } catch (RowKeyParseException rkpe) {
@@ -496,7 +501,11 @@ public class JobFileTableMapper extends
       throws java.io.IOException, InterruptedException {
 
     IOException caught = null;
-
+    
+    //Close the MultipleOutputs instance
+    //to call close on all wrapped OutputFormats's RecordWriters
+    mos.close();
+    
     if (jobHistoryByIdService != null) {
       try {
         jobHistoryByIdService.close();

@@ -28,8 +28,8 @@ public class Constants {
   // HBase constants
 
   // separator character used between key components
-  public static final char HBASE_SEP_CHAR = '!';
-  public static final String SEP = "" + HBASE_SEP_CHAR;
+  public static final char SEP_CHAR = '!';
+  public static final String SEP = "" + SEP_CHAR;
   public static final byte[] SEP_BYTES = Bytes.toBytes(SEP);
   
   public static final String PERIOD_SEP_CHAR = ".";
@@ -430,6 +430,8 @@ public class Constants {
   public static final String JOBCONF_GRAPHITE_HOST_KEY = "hraven.sink.graphite.host";
   public static final String JOBCONF_GRAPHITE_PORT_KEY = "hraven.sink.graphite.port";
   public static final String JOBCONF_GRAPHITE_PREFIX = "hraven.sink.graphite.prefix";
+  public static final String JOBCONF_PROCESS_TASKHISTORY = "hraven.conf.processtasks";
+  
   public static final int GRAPHITE_DEFAULT_PORT = 2003;
   
   public static final String JOBCONF_SINKS = "hraven.sinks";

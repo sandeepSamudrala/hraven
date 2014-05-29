@@ -4,7 +4,7 @@ package com.twitter.hraven;
  * 
  * @author angad.singh
  *
- * {@link JobFileTableMapper outputs this as key. It corresponds to the
+ * {@link JobFileTableMapper} outputs this as key. It corresponds to the
  * Hbase table which was earlier emitted
  */
 
@@ -24,7 +24,7 @@ public enum HravenService {
   JOB_HISTORY_TASK {
     @Override
     public HravenRecord getNewRecord() {
-      return new JobHistoryRecord();
+      return new JobHistoryTaskRecord();
     }
   };
 

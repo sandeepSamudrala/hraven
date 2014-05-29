@@ -663,7 +663,7 @@ public class JobHistoryService {
    *
    * @throws IllegalArgumentException if neither config param is found
    */
-   static void setHravenQueueNameRecord(Configuration jobConf, JobHistoryMultiRecord record, JobKey jobKey) {
+   static void setHravenQueueNameRecord(Configuration jobConf, JobHistoryRecordCollection recordCollection, JobKey jobKey) {
 
      String hRavenQueueName = HadoopConfUtil.getQueueName(jobConf);
      if (hRavenQueueName.equalsIgnoreCase(Constants.DEFAULT_VALUE_QUEUENAME)){
@@ -674,7 +674,7 @@ public class JobHistoryService {
 
      // set the "queue" property defined by hRaven
      // this makes it independent of hadoop version config parameters
-	 record.add(RecordCategory.CONF_META, new RecordDataKey(
+	 recordCollection.add(RecordCategory.CONF_META, new RecordDataKey(
 				Constants.HRAVEN_QUEUE), hRavenQueueName);
    }
 
@@ -689,28 +689,28 @@ public class JobHistoryService {
    *          the job configuration
    * @return puts for the given job configuration
    */
-  public static JobHistoryMultiRecord getConfRecord(JobDesc jobDesc, Configuration jobConf) {
+  public static JobHistoryRecordCollection getConfRecord(JobDesc jobDesc, Configuration jobConf) {
     JobKey jobKey = new JobKey(jobDesc);
 
     // Add all columns to one put
-    JobHistoryMultiRecord record = new JobHistoryMultiRecord(jobKey);
+    JobHistoryRecordCollection recordCollection = new JobHistoryRecordCollection(jobKey);
 
-    record.add(RecordCategory.CONF_META, new RecordDataKey(Constants.VERSION_COLUMN),
+    recordCollection.add(RecordCategory.CONF_META, new RecordDataKey(Constants.VERSION_COLUMN),
       jobDesc.getVersion());
-    record.add(RecordCategory.CONF_META, new RecordDataKey(Constants.FRAMEWORK_COLUMN), jobDesc
+    recordCollection.add(RecordCategory.CONF_META, new RecordDataKey(Constants.FRAMEWORK_COLUMN), jobDesc
         .getFramework().toString());
 
     // Create records for all the parameters in the job configuration
     Iterator<Entry<String, String>> jobConfIterator = jobConf.iterator();
     while (jobConfIterator.hasNext()) {
       Entry<String, String> entry = jobConfIterator.next();
-      record.add(RecordCategory.CONF, new RecordDataKey(entry.getKey()), entry.getValue());
+      recordCollection.add(RecordCategory.CONF, new RecordDataKey(entry.getKey()), entry.getValue());
     }
 
     // ensure pool/queuename is set correctly
-    setHravenQueueNameRecord(jobConf, record, jobKey);
+    setHravenQueueNameRecord(jobConf, recordCollection, jobKey);
 
-    return record;
+    return recordCollection;
   }
 
   /**

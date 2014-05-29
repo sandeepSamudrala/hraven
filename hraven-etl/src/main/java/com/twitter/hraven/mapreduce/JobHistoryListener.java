@@ -17,6 +17,8 @@ package com.twitter.hraven.mapreduce;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -35,10 +37,11 @@ import org.apache.hadoop.mapred.JobHistoryCopy.RecordTypes;
 import com.google.common.base.Function;
 import com.twitter.hraven.Constants;
 import com.twitter.hraven.HravenRecord;
-import com.twitter.hraven.JobHistoryMultiRecord;
+import com.twitter.hraven.JobHistoryRecordCollection;
 import com.twitter.hraven.JobHistoryKeys;
 import com.twitter.hraven.JobHistoryRawRecord;
 import com.twitter.hraven.JobHistoryRecord;
+import com.twitter.hraven.JobHistoryTaskRecord;
 import com.twitter.hraven.RecordDataKey;
 import com.twitter.hraven.JobKey;
 import com.twitter.hraven.RecordCategory;
@@ -62,26 +65,27 @@ public class JobHistoryListener implements Listener {
    */
   private long mapSlotMillis = 0L;
   private long reduceSlotMillis = 0L;
-  private JobHistoryMultiRecord jobRecords;
-  private JobHistoryMultiRecord taskRecords;
-  private JobKeyConverter jobKeyConv = new JobKeyConverter();
-  private TaskKeyConverter taskKeyConv = new TaskKeyConverter();
+  private boolean processTasks = true;
+  private Collection jobRecords;
+  private Collection taskRecords;
 
   /**
    * Constructor for listener to be used to read in a Job History File. While
    * reading a list of HBase puts is assembled.
    * 
    * @param jobKey jobKey of the job to be persisted
+   * @param processTasks 
    */
-  public JobHistoryListener(JobKey jobKey) {
+  public JobHistoryListener(JobKey jobKey, boolean processTasks) {
     if (null == jobKey) {
       String msg = "JobKey cannot be null";
       LOG.error(msg);
       throw new IllegalArgumentException(msg);
     }
     this.jobKey = jobKey;
-    this.jobRecords = new JobHistoryMultiRecord(jobKey);
-    this.taskRecords = new JobHistoryMultiRecord(jobKey);
+    this.jobRecords = new JobHistoryRecordCollection(jobKey);
+    this.taskRecords = new ArrayList<JobHistoryTaskRecord>();
+    this.processTasks = processTasks;
     setJobId(jobKey.getJobId().getJobIdString());
   }
 
@@ -93,13 +97,16 @@ public class JobHistoryListener implements Listener {
       handleJob(values);
       break;
     case Task:
-      handleTask(values);
+      if (processTasks)
+        handleTask(values);
       break;
     case MapAttempt:
-      handleMapAttempt(values);
+      if (processTasks)
+        handleMapAttempt(values);
       break;
     case ReduceAttempt:
-      handleReduceAttempt(values);
+      if (processTasks)
+        handleReduceAttempt(values);
       break;
     default:
       // skip other types
@@ -108,7 +115,7 @@ public class JobHistoryListener implements Listener {
   }
 
   private interface RecordGenerator {
-	  public JobHistoryRecord getRecord(RecordDataKey key, Object value, boolean isNumeric);
+	  public HravenRecord getRecord(RecordDataKey key, Object value, boolean isNumeric);
   }
   
   private void handleJob(Map<JobHistoryKeys, String> values) {
@@ -152,55 +159,57 @@ public class JobHistoryListener implements Listener {
   private void handleTask(Map<JobHistoryKeys, String> values) {
     final TaskKey taskKey = getTaskKey("task_", this.jobNumber, values.get(JobHistoryKeys.TASKID));
 
-	this.taskRecords.add(new JobHistoryRecord(
-			RecordCategory.HISTORY_TASK_META, taskKey, new RecordDataKey(
-			Constants.RECORD_TYPE_COL), RecordTypes.Task.toString()));
-    
+    this.taskRecords.add(new JobHistoryTaskRecord(RecordCategory.HISTORY_TASK_META, taskKey,
+        new RecordDataKey(Constants.RECORD_TYPE_COL), RecordTypes.Task.toString()));
+
     for (Map.Entry<JobHistoryKeys, String> e : values.entrySet()) {
       addRecords(taskRecords, e.getKey(), e.getValue(), new RecordGenerator() {
         @Override
-        public JobHistoryRecord getRecord(RecordDataKey key, Object value, boolean isNumeric) {
-          return new JobHistoryRecord(isNumeric ? RecordCategory.HISTORY_TASK_COUNTER : RecordCategory.HISTORY_TASK_META, taskKey, key, value);
+        public JobHistoryTaskRecord getRecord(RecordDataKey key, Object value, boolean isNumeric) {
+          return new JobHistoryTaskRecord(isNumeric ? RecordCategory.HISTORY_TASK_COUNTER
+              : RecordCategory.HISTORY_TASK_META, taskKey, key, value);
         }
       });
     }
   }
 
   private void handleMapAttempt(Map<JobHistoryKeys, String> values) {
-	  final TaskKey taskKey = getTaskKey("attempt_", this.jobNumber, values.get(JobHistoryKeys.TASK_ATTEMPT_ID));
+    final TaskKey taskKey =
+        getTaskKey("attempt_", this.jobNumber, values.get(JobHistoryKeys.TASK_ATTEMPT_ID));
 
-	  this.taskRecords.add(new JobHistoryRecord(
-			RecordCategory.HISTORY_TASK_META, taskKey, new RecordDataKey(
-			Constants.RECORD_TYPE_COL), RecordTypes.MapAttempt.toString()));
-	
+    this.taskRecords.add(new JobHistoryTaskRecord(RecordCategory.HISTORY_TASK_META, taskKey,
+        new RecordDataKey(Constants.RECORD_TYPE_COL), RecordTypes.MapAttempt.toString()));
+
     for (Map.Entry<JobHistoryKeys, String> e : values.entrySet()) {
       addRecords(taskRecords, e.getKey(), e.getValue(), new RecordGenerator() {
         @Override
-        public JobHistoryRecord getRecord(RecordDataKey key, Object value, boolean isNumeric) {
-          return new JobHistoryRecord(isNumeric ? RecordCategory.HISTORY_TASK_COUNTER : RecordCategory.HISTORY_TASK_META, taskKey, key, value);
+        public JobHistoryTaskRecord getRecord(RecordDataKey key, Object value, boolean isNumeric) {
+          return new JobHistoryTaskRecord(isNumeric ? RecordCategory.HISTORY_TASK_COUNTER
+              : RecordCategory.HISTORY_TASK_META, taskKey, key, value);
         }
       });
     }
   }
 
   private void handleReduceAttempt(Map<JobHistoryKeys, String> values) {
-	final TaskKey taskKey = getTaskKey("attempt_", this.jobNumber, values.get(JobHistoryKeys.TASK_ATTEMPT_ID));
+    final TaskKey taskKey =
+        getTaskKey("attempt_", this.jobNumber, values.get(JobHistoryKeys.TASK_ATTEMPT_ID));
 
-	this.taskRecords.add(new JobHistoryRecord(
-			RecordCategory.HISTORY_TASK_META, taskKey, new RecordDataKey(
-			Constants.RECORD_TYPE_COL), RecordTypes.ReduceAttempt.toString()));
-	
+    this.taskRecords.add(new JobHistoryTaskRecord(RecordCategory.HISTORY_TASK_META, taskKey,
+        new RecordDataKey(Constants.RECORD_TYPE_COL), RecordTypes.ReduceAttempt.toString()));
+
     for (Map.Entry<JobHistoryKeys, String> e : values.entrySet()) {
       addRecords(taskRecords, e.getKey(), e.getValue(), new RecordGenerator() {
         @Override
-        public JobHistoryRecord getRecord(RecordDataKey key, Object value, boolean isNumeric) {
-          return new JobHistoryRecord(isNumeric ? RecordCategory.HISTORY_TASK_COUNTER : RecordCategory.HISTORY_TASK_META, taskKey, key, value);
+        public JobHistoryTaskRecord getRecord(RecordDataKey key, Object value, boolean isNumeric) {
+          return new JobHistoryTaskRecord(isNumeric ? RecordCategory.HISTORY_TASK_COUNTER
+              : RecordCategory.HISTORY_TASK_META, taskKey, key, value);
         }
       });
     }
   }
 
-  private void addRecords(JobHistoryMultiRecord records, JobHistoryKeys key, String value,
+  private void addRecords(Collection recordCollection, JobHistoryKeys key, String value,
       RecordGenerator generator) {
     if (key == JobHistoryKeys.COUNTERS || key == JobHistoryKeys.MAP_COUNTERS
         || key == JobHistoryKeys.REDUCE_COUNTERS) {
@@ -214,7 +223,7 @@ public class JobHistoryListener implements Listener {
             String counterName = counter.getName();
             long counterValue = counter.getValue();
             dataKey.add(counterName);
-            records.add(generator.getRecord(dataKey, counterValue, true));
+            recordCollection.add(generator.getRecord(dataKey, counterValue, true));
 
             // get the map and reduce slot millis for megabytemillis
             // calculations
@@ -250,7 +259,8 @@ public class JobHistoryListener implements Listener {
         }
       }
       
-      records.add(generator.getRecord(new RecordDataKey(key.toString().toLowerCase()), valueObj, isNumeric));
+      recordCollection.add(generator.getRecord(new RecordDataKey(key.toString()),
+        valueObj, isNumeric));
     }
   }
 
@@ -298,11 +308,11 @@ public class JobHistoryListener implements Listener {
    *         is called with this listener.
    * @return a non-null (possibly empty) list of jobPuts
    */
-  public JobHistoryMultiRecord getJobRecords() {
+  public Collection getJobRecords() {
     return this.jobRecords;
   }
 
-  public JobHistoryMultiRecord getTaskRecords() {
+  public Collection getTaskRecords() {
     return this.taskRecords;
   }
 

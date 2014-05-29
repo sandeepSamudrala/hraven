@@ -2,16 +2,24 @@ package com.twitter.hraven.mapreduce;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.kenai.jffi.Array;
 import com.twitter.hraven.Constants;
 import com.twitter.hraven.Framework;
 import com.twitter.hraven.HravenService;
-import com.twitter.hraven.JobHistoryMultiRecord;
+import com.twitter.hraven.JobHistoryKeys;
+import com.twitter.hraven.JobHistoryRecordCollection;
 import com.twitter.hraven.JobHistoryRecord;
 import com.twitter.hraven.JobKey;
 import com.twitter.hraven.RecordCategory;
@@ -26,10 +34,17 @@ public class GraphiteHistoryWriter {
   private final Pattern APPID_PATTERN_PIGJOB = Pattern.compile("PigLatin:(.*).pig");
   private static final Pattern GRAPHITE_KEY_FILTER = Pattern.compile("[./\\\\\\-\\s]+");
   private static final int PIG_ALIAS_FINGERPRINT_LENGTH = 100;
+  
+  private static final String submitTimeKey = JobHistoryKeys.SUBMIT_TIME.toString().toLowerCase();
+  private static final String launchTimeKey = JobHistoryKeys.LAUNCH_TIME.toString().toLowerCase();
+  private static final String finishTimeKey = JobHistoryKeys.FINISH_TIME.toString().toLowerCase();
+  private static final String totalTimeKey = "total_time";
+  private static final String runTimeKey = "run_time";
 
   private HravenService service;
-  private JobHistoryMultiRecord records;
+  private JobHistoryRecordCollection recordCollection;
   private String PREFIX;
+  private StringBuilder lines;
 
   /**
    * Writes a single {@link JobHistoryRecord} to the specified {@link HravenService} Passes the
@@ -43,63 +58,85 @@ public class GraphiteHistoryWriter {
    */
 
   public GraphiteHistoryWriter(String prefix, HravenService serviceKey,
-      JobHistoryMultiRecord records) {
+      JobHistoryRecordCollection recordCollection, StringBuilder sb) {
     this.service = serviceKey;
-    this.records = records;
+    this.recordCollection = recordCollection;
     this.PREFIX = prefix;
+    this.lines = sb;
   }
 
-  public String getOutput() throws IOException {
-    StringBuilder lines = new StringBuilder();
+  public int write() throws IOException {
+    /*
+     * Send metrics in the format {PREFIX}.{cluster}.{user}.{appId}.{subAppId} {value}
+     * {submit_time} subAppId is formed differently for each framework. For pig, its the alias
+     * names and feature used in the job. appId will be parsed with a bunch of known patterns
+     * (oozie launcher jobs, pig jobs, etc.)
+     */
 
-    for (JobHistoryRecord jobRecord : records) {
+    int lineCount = 0;
+    Framework framework = getFramework(recordCollection);
+    String metricsPathPrefix;
+
+    String pigAliasFp = getPigAliasFingerprint(recordCollection);
+
+    if (framework == Framework.PIG && pigAliasFp != null) {
+      // TODO: should ideally include app version too, but PIG-2587's pig.logical.plan.signature
+      // which hraven uses was available only from pig 0.11
+      metricsPathPrefix =
+          generatePathPrefix(PREFIX, recordCollection.getKey().getCluster(), recordCollection.getKey()
+              .getUserName(), genAppId(recordCollection, recordCollection.getKey().getAppId()), pigAliasFp).toString();
+    } else {
+      metricsPathPrefix =
+          generatePathPrefix(PREFIX, recordCollection.getKey().getCluster(), recordCollection.getKey()
+              .getUserName(), genAppId(recordCollection, recordCollection.getKey().getAppId())).toString();
+    }
+    
+    // Round the timestamp to second as Graphite accepts it in such
+    // a format.
+    int timestamp = Math.round(recordCollection.getSubmitTime() / 1000);
+    
+    // For now, relies on receiving job history and job conf as part of the same
+    // JobHistoryMultiRecord
+    for (JobHistoryRecord jobRecord : recordCollection) {
       if (service == HravenService.JOB_HISTORY
-          && jobRecord.getDataCategory() == RecordCategory.HISTORY_COUNTER) {
+          && (jobRecord.getDataCategory() == RecordCategory.HISTORY_COUNTER || jobRecord
+              .getDataCategory() == RecordCategory.INFERRED)
+          && !(jobRecord.getDataKey().get(0).equals(submitTimeKey)
+              || jobRecord.getDataKey().get(0).equals(launchTimeKey) || jobRecord.getDataKey()
+              .get(0).equals(finishTimeKey))) {
 
-        /*
-         * Send metrics in the format {PREFIX}.{cluster}.{user}.{appId}.{subAppId} {value}
-         * {submit_time} subAppId is formed differently for each framework For pig, it is the alias
-         * names of the job appId will be parsed with a bunch of known patterns (oozie launcher
-         * jobs, pig jobs, etc.)
-         */
-
-        Framework framework = getFramework(records);
-        StringBuilder metricsPathPrefix;
-
-        String pigAliasFp = getPigAliasFingerprint(records);
-
-        if (framework == Framework.PIG && pigAliasFp != null) {
-          // TODO: should ideally include app version too, but PIG-2587's pig.logical.plan.signature
-          // which hravne uses was available only from pig 0.11
-          metricsPathPrefix =
-              generatePathPrefix(PREFIX, jobRecord.getKey().getCluster(), jobRecord.getKey()
-                  .getUserName(), genAppId(records, jobRecord.getKey().getAppId()), pigAliasFp);
-        } else {
-          metricsPathPrefix =
-              generatePathPrefix(PREFIX, jobRecord.getKey().getCluster(), jobRecord.getKey()
-                  .getUserName(), genAppId(records, jobRecord.getKey().getAppId()));
-        }
-
-        lines.append(metricsPathPrefix.toString());
+        lineCount++;
+        lines.append(metricsPathPrefix);
 
         for (String comp : jobRecord.getDataKey().getComponents()) {
           lines.append(".").append(sanitize(comp));
         }
 
-        // Round the timestamp to second as Graphite accepts it in such
-        // a format.
-        int timestamp = Math.round(jobRecord.getSubmitTime() / 1000);
-        lines.append(" ").append(jobRecord.getDataValue()).append(" ").append(timestamp)
-            .append("\n");
+        lines.append(" ").append(jobRecord.getDataValue()).append(" ")
+            .append(timestamp).append("\n");
       }
     }
+    
+    //handle run times
+    Long finishTime = (Long)recordCollection.getValue(RecordCategory.HISTORY_COUNTER, new RecordDataKey(finishTimeKey));
+    Long launchTime = (Long)recordCollection.getValue(RecordCategory.HISTORY_COUNTER, new RecordDataKey(launchTimeKey));
+    
+    if (finishTime != null && recordCollection.getSubmitTime() != null) {
+      lines.append(metricsPathPrefix + ".").append(totalTimeKey + " " + (finishTime-recordCollection.getSubmitTime()) + " " + timestamp + "\n");
+      lineCount++;
+    }
+    
+    if (finishTime != null && launchTime != null) {
+      lines.append(metricsPathPrefix + ".").append(runTimeKey + " " + (finishTime-launchTime) + " " + timestamp + "\n");
+      lineCount++;
+    }
 
-    return lines.toString();
+    return lineCount;
   }
 
-  private String getPigAliasFingerprint(JobHistoryMultiRecord records) {
-    Object aliasRec = records.getValue(RecordCategory.CONF, new RecordDataKey("pig.alias"));
-    Object featureRec = records.getValue(RecordCategory.CONF, new RecordDataKey("pig.job.feature"));
+  private String getPigAliasFingerprint(JobHistoryRecordCollection recordCollection) {
+    Object aliasRec = recordCollection.getValue(RecordCategory.CONF, new RecordDataKey("pig.alias"));
+    Object featureRec = recordCollection.getValue(RecordCategory.CONF, new RecordDataKey("pig.job.feature"));
 
     String alias = null;
     String feature = null;
@@ -120,10 +157,10 @@ public class GraphiteHistoryWriter {
     return null;
   }
 
-  private String genAppId(JobHistoryMultiRecord records, String appId) {
-    String oozieActionName = getOozieActionName(records);
+  private String genAppId(JobHistoryRecordCollection recordCollection, String appId) {
+    String oozieActionName = getOozieActionName(recordCollection);
 
-    if (getFramework(records) == Framework.PIG && APPID_PATTERN_PIGJOB.matcher(appId).matches()) {
+    if (getFramework(recordCollection) == Framework.PIG && APPID_PATTERN_PIGJOB.matcher(appId).matches()) {
       // pig:{oozie-action-name}:{pigscript}
       if (oozieActionName != null) appId =
           APPID_PATTERN_PIGJOB.matcher(appId).replaceAll("pig:" + oozieActionName + ":$1");
@@ -141,9 +178,9 @@ public class GraphiteHistoryWriter {
     return appId;
   }
 
-  private Framework getFramework(JobHistoryMultiRecord records) {
+  private Framework getFramework(JobHistoryRecordCollection recordCollection) {
     Object rec =
-        records.getValue(RecordCategory.CONF_META, new RecordDataKey(Constants.FRAMEWORK_COLUMN));
+        recordCollection.getValue(RecordCategory.CONF_META, new RecordDataKey(Constants.FRAMEWORK_COLUMN));
 
     if (rec != null) {
       return Framework.valueOf((String) rec);
@@ -152,8 +189,8 @@ public class GraphiteHistoryWriter {
     return null;
   }
 
-  private String getOozieActionName(JobHistoryMultiRecord records) {
-    Object rec = records.getValue(RecordCategory.CONF, new RecordDataKey("oozie.action.id"));
+  private String getOozieActionName(JobHistoryRecordCollection recordCollection) {
+    Object rec = recordCollection.getValue(RecordCategory.CONF, new RecordDataKey("oozie.action.id"));
 
     if (rec != null) {
       String actionId = ((String) rec);
@@ -188,7 +225,14 @@ public class GraphiteHistoryWriter {
    * @throws UnsupportedEncodingException
    */
   private String sanitize(String s) {
-    return GRAPHITE_KEY_FILTER.matcher(s).replaceAll("_");
+    String sanitized = s;
+    Matcher m = GRAPHITE_KEY_FILTER.matcher(s);
+    
+    if (m.matches()) {
+      sanitized = m.replaceAll("_");
+    }
+    
+    return sanitized.toLowerCase();
   }
 
   /**

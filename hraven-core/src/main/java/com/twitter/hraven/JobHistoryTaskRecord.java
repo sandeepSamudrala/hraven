@@ -1,13 +1,13 @@
 package com.twitter.hraven;
 
 /**
- * @author angad.singh Abstraction of a record to be stored in the {@link HravenService#JOB_HISTORY}
- *         service. Was earlier directly written as an Hbase put
+ * @author angad.singh Abstraction of a record to be stored in the
+ *         {@link HravenService#JOB_HISTORY_TASK} service.
  */
 
-public class JobHistoryRecord extends HravenRecord<JobKey, Object> {
+public class JobHistoryTaskRecord extends HravenRecord<TaskKey, Object> {
 
-  public JobHistoryRecord(RecordCategory dataCategory, JobKey key, RecordDataKey dataKey,
+  public JobHistoryTaskRecord(RecordCategory dataCategory, TaskKey key, RecordDataKey dataKey,
       Object dataValue) {
     this.setKey(key);
     this.setDataCategory(dataCategory);
@@ -15,17 +15,17 @@ public class JobHistoryRecord extends HravenRecord<JobKey, Object> {
     this.setDataValue(dataValue);
   }
 
-  public JobHistoryRecord(RecordCategory dataCategory, JobKey key, RecordDataKey dataKey,
+  public JobHistoryTaskRecord(RecordCategory dataCategory, TaskKey key, RecordDataKey dataKey,
       Object dataValue, Long submitTime) {
     this(dataCategory, key, dataKey, dataValue);
     setSubmitTime(submitTime);
   }
 
-  public JobHistoryRecord() {
+  public JobHistoryTaskRecord() {
 
   }
 
-  public JobHistoryRecord(JobKey jobKey) {
+  public JobHistoryTaskRecord(TaskKey jobKey) {
     this.setKey(jobKey);
   }
 

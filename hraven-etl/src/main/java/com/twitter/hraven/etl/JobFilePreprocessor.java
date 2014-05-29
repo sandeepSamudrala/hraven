@@ -167,6 +167,13 @@ public class JobFilePreprocessor extends Configured implements Tool {
     o.setRequired(false);
     options.addOption(o);
 
+    // Accept a minModificationTimeMillis. Don't process files before this time.
+    o = new Option("m", "minModificationTimeMillis", true,
+            "The minimum modification time of the file to be processed");
+    o.setArgName("minModificationTimeMillis");
+    o.setRequired(false);
+    options.addOption(o);
+
     // Debugging
     options.addOption("d", "debug", false, "switch on DEBUG log level");
 
@@ -285,6 +292,17 @@ public class JobFilePreprocessor extends Configured implements Tool {
       throw new ProcessingException("Caught NumberFormatException during conversion "
             + " of maxFileSize to long", nfe);
     }
+    
+    // Grab the minModificationTimeMillis argument
+    long minModificationTimeMillis = 0;
+    
+    try {
+      minModificationTimeMillis = Long.parseLong(commandLine.getOptionValue("m"));
+    } catch (NumberFormatException nfe) {
+      throw new IllegalArgumentException(
+          "minModificationTimeMillis has to be an epoch time (long). Can't be: "
+              + commandLine.getOptionValue("m"), nfe);
+    }
 
     ProcessRecordService processRecordService = new ProcessRecordService(
         hbaseConf);
@@ -298,13 +316,21 @@ public class JobFilePreprocessor extends Configured implements Tool {
       if (!forceAllFiles) {
         lastProcessRecord = processRecordService
             .getLastSuccessfulProcessRecord(cluster);
+      } else {
+        //discard minModificationTimeMillis arguemnt given if all files
+        //are to be forced.
+        minModificationTimeMillis = 0;
       }
 
-      long minModificationTimeMillis = 0;
+      // Start of this time period is the end of the last period.
       if (lastProcessRecord != null) {
-        // Start of this time period is the end of the last period.
-        minModificationTimeMillis = lastProcessRecord
-            .getMaxModificationTimeMillis();
+        // Honour the minModificationTimeMillis option argument given
+        // Choose the maximum of the two.
+        if (minModificationTimeMillis < lastProcessRecord
+            .getMaxModificationTimeMillis()) {
+          minModificationTimeMillis = lastProcessRecord
+              .getMaxModificationTimeMillis();
+        }
       }
 
       // Do a sanity check. The end time of the last scan better not be later

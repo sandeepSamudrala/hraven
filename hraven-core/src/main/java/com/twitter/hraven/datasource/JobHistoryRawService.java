@@ -219,7 +219,7 @@ public class JobHistoryRawService {
           oneBiggerThanMaxJobId));
 
     } else {
-      char oneBiggerSep = (char) (Constants.HBASE_SEP_CHAR + 1);
+      char oneBiggerSep = (char) (Constants.SEP_CHAR + 1);
       stopRow = Bytes.toBytes(cluster + oneBiggerSep);
     }
     // In addition to InclusiveStopRowFilter, set an estimated end-row that is
@@ -538,7 +538,7 @@ public class JobHistoryRawService {
     if (value == null) {
       throw new IllegalArgumentException("Cannot create InputStream from null");
     }
-
+    
     KeyValue keyValue =
         value.getColumnLatest(Constants.RAW_FAM_BYTES, Constants.JOBHISTORY_COL_BYTES);
 

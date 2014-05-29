@@ -31,6 +31,7 @@ import org.junit.Test;
 import com.twitter.hraven.Constants;
 import com.twitter.hraven.JobHistoryKeys;
 import com.twitter.hraven.JobHistoryRecord;
+import com.twitter.hraven.JobHistoryRecordCollection;
 import com.twitter.hraven.JobKey;
 import com.twitter.hraven.HadoopVersion;
 import com.twitter.hraven.mapreduce.JobHistoryListener;
@@ -50,7 +51,7 @@ public class TestJobHistoryListener {
 	public void checkHadoopVersionSet() {
 		JobKey jobKey = new JobKey("cluster1", "user", "Sleep", 1,
 				"job_1329348432655_0001");
-		JobHistoryListener jobHistoryListener = new JobHistoryListener(jobKey);
+		JobHistoryListener jobHistoryListener = new JobHistoryListener(jobKey, true);
 		assertEquals(jobHistoryListener.getJobRecords().size(), 0);
 		
 		JobHistoryFileParserHadoop1 jh = new JobHistoryFileParserHadoop1(null);
@@ -63,7 +64,7 @@ public class TestJobHistoryListener {
 
 		// check hadoop version
 		boolean foundVersion1 = false;
-		for (JobHistoryRecord p : jobHistoryListener.getJobRecords()) {
+		for (JobHistoryRecord p : (JobHistoryRecordCollection)jobHistoryListener.getJobRecords()) {
 		  if (!p.getDataKey().get(0).equals(JobHistoryKeys.hadoopversion.toString().toLowerCase())) {
 			// we are interested in hadoop version put only
 			// hence continue

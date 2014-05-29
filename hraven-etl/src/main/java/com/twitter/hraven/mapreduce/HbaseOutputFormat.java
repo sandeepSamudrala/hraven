@@ -19,8 +19,9 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import com.twitter.hraven.Constants;
 import com.twitter.hraven.HravenRecord;
 import com.twitter.hraven.HravenService;
-import com.twitter.hraven.JobHistoryMultiRecord;
+import com.twitter.hraven.JobHistoryRecordCollection;
 import com.twitter.hraven.JobHistoryRecord;
+import com.twitter.hraven.JobHistoryTaskRecord;
 import com.twitter.hraven.RecordCategory;
 import com.twitter.hraven.RecordDataKey;
 import com.twitter.hraven.TaskKey;
@@ -44,27 +45,29 @@ public class HbaseOutputFormat extends OutputFormat<HravenService, HravenRecord>
     }
 
     /**
-     * Writes a single {@link JobHistoryRecord} to the specified {@link HravenService}
+     * Writes a single {@link HravenRecord} to the specified {@link HravenService}
      * @param serviceKey
-     * @param jobRecord
+     * @param value
      * @throws IOException
      * @throws InterruptedException
      */
-    private void writeRecord(HravenService serviceKey, JobHistoryRecord jobRecord)
+    private void writeRecord(HravenService serviceKey, HravenRecord value)
         throws IOException, InterruptedException {
       ImmutableBytesWritable table = null;
       Put put = null;
 
       switch (serviceKey) {
       case JOB_HISTORY:
-        put = new Put(new JobKeyConverter().toBytes(jobRecord.getKey()));
+        JobHistoryRecord rec = (JobHistoryRecord) value;
+        put = new Put(new JobKeyConverter().toBytes(rec.getKey()));
         table = new ImmutableBytesWritable(Constants.HISTORY_TABLE_BYTES);
-        JobHistoryHbaseConverter.addHistoryPuts(jobRecord, put);
+        HbaseHistoryWriter.addHistoryPuts(rec, put);
         break;
       case JOB_HISTORY_TASK:
-        put = new Put(new TaskKeyConverter().toBytes((TaskKey) jobRecord.getKey()));
-        table = new ImmutableBytesWritable(Constants.HISTORY_TABLE_BYTES);
-        JobHistoryHbaseConverter.addHistoryPuts(jobRecord, put);
+        JobHistoryTaskRecord taskRec = (JobHistoryTaskRecord) value;
+        put = new Put(new TaskKeyConverter().toBytes((TaskKey) taskRec.getKey()));
+        table = new ImmutableBytesWritable(Constants.HISTORY_TASK_TABLE_BYTES);
+        HbaseHistoryWriter.addHistoryPuts(taskRec, put);
         break;
       }
 
@@ -72,19 +75,19 @@ public class HbaseOutputFormat extends OutputFormat<HravenService, HravenRecord>
     }
 
     /**
-     * Split a {@link JobHistoryMultiRecord} into {@link JobHistoryRecord}s and call the
+     * Split a {@link JobHistoryRecordCollection} into {@link JobHistoryRecord}s and call the
      * {@link #writeRecord(HravenService, JobHistoryRecord)} method
      */
 
     @Override
     public void write(HravenService serviceKey, HravenRecord value) throws IOException,
         InterruptedException {
-      if (value instanceof JobHistoryMultiRecord) {
-        for (JobHistoryRecord record : (JobHistoryMultiRecord) value) {
+      if (value instanceof JobHistoryRecordCollection) {
+        for (JobHistoryRecord record : (JobHistoryRecordCollection) value) {
           writeRecord(serviceKey, record);
         }
       } else {
-        writeRecord(serviceKey, (JobHistoryRecord) value);
+        writeRecord(serviceKey, value);
       }
     }
 

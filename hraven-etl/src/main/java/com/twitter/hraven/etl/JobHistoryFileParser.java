@@ -15,10 +15,11 @@ limitations under the License.
  */
 package com.twitter.hraven.etl;
 
+import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.hbase.client.Put;
 
-import com.twitter.hraven.JobHistoryMultiRecord;
+import com.twitter.hraven.JobHistoryRecordCollection;
 import com.twitter.hraven.JobHistoryRecord;
 import com.twitter.hraven.JobKey;
 import com.twitter.hraven.datasource.ProcessingException;
@@ -34,10 +35,11 @@ public interface JobHistoryFileParser {
 
 	/**
 	 * this method should parse the history file and populate the puts
+	 * @param processTasks 
 	 * 
 	 * @throws ProcessingException
 	 */
-	public void parse(byte[] historyFile, JobKey jobKey);
+	public void parse(byte[] historyFile, JobKey jobKey, boolean processTasks);
 
 	/**
 	 * Calculates the megabytmillis taken up by this job
@@ -53,7 +55,7 @@ public interface JobHistoryFileParser {
 	 * 
 	 * @return a list of jobPuts
 	 */
-	public JobHistoryMultiRecord getJobRecords();
+	public Collection getJobRecords();
 
 	/**
 	 * Return the generated list of task puts assembled when history file is
@@ -61,6 +63,6 @@ public interface JobHistoryFileParser {
 	 * 
 	 * @return a list of taskPuts
 	 */
-	public JobHistoryMultiRecord getTaskRecords();
+	public Collection getTaskRecords();
 
 }
