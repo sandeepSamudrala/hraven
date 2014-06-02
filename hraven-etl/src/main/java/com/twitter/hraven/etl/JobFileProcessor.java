@@ -164,15 +164,7 @@ public class JobFileProcessor extends Configured implements Tool {
     // Debugging
     options.addOption("d", "debug", false, "switch on DEBUG log level");
 
-    // Cost Properties File to be copied to distributed cache
-    o = new Option("z", "costFile", true,
-      "The cost properties file on local disk");
-    o.setArgName("costfile");
-    o.setRequired(true);
-    options.addOption(o);
-    
-    o = new Option("zf", "costFile", true,
-      "The cost properties file location on HDFS");
+    o = new Option("zf", "costFile", true, "The cost properties file location on HDFS");
     o.setArgName("costfile_loc");
     o.setRequired(true);
     options.addOption(o);
@@ -306,25 +298,15 @@ public class JobFileProcessor extends Configured implements Tool {
     }
 
     // Grab the costfile argument
-    String costFile = commandLine.getOptionValue("z");
-    String costFilePath = commandLine.getOptionValue("zf");
-    LOG.info("cost properties file=" + costFile);
-    LOG.info("cost properties file path=" + costFilePath);
-    FileSystem fs = FileSystem.get(hbaseConf);
-    
-    if (costFilePath == null)
-    	costFilePath = Constants.COST_PROPERTIES_HDFS_DIR;
-    
-    Path hdfsPath = new Path(costFilePath
-      + Constants.COST_PROPERTIES_FILENAME);
-    
-    // upload the file to hdfs. Overwrite any existing copy.
-    fs.copyFromLocalFile(false, true, new Path(costFile), hdfsPath);
 
+    String costFilePath = commandLine.getOptionValue("zf");
+    LOG.info("cost properties file on hdfs=" + costFilePath);
+    if (costFilePath == null) costFilePath = Constants.COST_PROPERTIES_HDFS_DIR;
+    Path hdfsPath = new Path(costFilePath + Constants.COST_PROPERTIES_FILENAME);
     // add to distributed cache
     DistributedCache.addCacheFile(hdfsPath.toUri(), hbaseConf);
+    
     // Grab the machine type argument
-
     String machineType = commandLine.getOptionValue("m");
     // set it as part of conf so that the
     // hRaven job can access it in the mapper
@@ -678,6 +660,9 @@ public class JobFileProcessor extends Configured implements Tool {
     // Note: must be BEFORE the job construction with the new mapreduce API.
     confClone.setBoolean("mapred.map.tasks.speculative.execution", false);
 
+    //Set tmpjars for hadoop to be able to find hraven-core and other required libs
+    HadoopUtil.setTmpJars(Constants.HRAVEN_HDFS_LIB_PATH_CONF, confClone);
+        
     // Set up job
     Job job = new Job(confClone, getJobName(totalJobCount));
 
@@ -720,17 +705,11 @@ public class JobFileProcessor extends Configured implements Tool {
 
   /**
    * DoIt.
-   * 
-   * @param args
-   *          the arguments to do it with
+   * @param args the arguments to do it with
+   * @throws Exception
    */
-  public static void main(String[] args) {
-    try {
-      ToolRunner.run(new JobFileProcessor(), args);
-    } catch (Exception e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
+  public static void main(String[] args) throws Exception {
+    ToolRunner.run(new JobFileProcessor(), args);
   }
 
 }

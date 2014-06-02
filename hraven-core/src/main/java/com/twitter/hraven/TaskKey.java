@@ -15,8 +15,14 @@ limitations under the License.
 */
 package com.twitter.hraven;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 import org.apache.commons.lang.builder.CompareToBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableComparable;
 
 
 /**
@@ -26,7 +32,7 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
  *   (m|r)_tasknumber(_attemptnumber)?
  * </pre>
  */
-public class TaskKey extends JobKey implements Comparable<Object> {
+public class TaskKey extends JobKey implements WritableComparable<Object> {
   private String taskId;
 
   public TaskKey(JobKey jobKey, String taskId) {
@@ -76,5 +82,17 @@ public class TaskKey extends JobKey implements Comparable<Object> {
 	  return new HashCodeBuilder().appendSuper(super.hashCode())
           .append(this.taskId)
           .toHashCode();
+  }
+  
+  @Override
+  public void write(DataOutput out) throws IOException {
+    super.write(out);
+    Text.writeString(out, this.taskId);
+  }
+
+  @Override
+  public void readFields(DataInput in) throws IOException {
+    super.readFields(in);
+    this.taskId = Text.readString(in);
   }
 }

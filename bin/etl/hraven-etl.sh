@@ -36,8 +36,15 @@ threads="20"
 hadoopconfdir=${HADOOP_CONF_DIR:-$HADOOP_HOME/conf}
 hbaseconfdir=${HBASE_CONF_DIR:-$HBASE_HOME/conf}
 # HDFS directories for processing and loading job history data
-historyRawDir=/hadoop/mapred/history/done
+year=2014
+month="*"
+day="*"
+historyDirPattern=/hadoop/mapred/history/done/*/$year/$month/$day/*/*
+historyBasePath=/hadoop/mapred/history/done
 historyProcessingDir=/hadoop/mapred/history/processing/
+taskHistoryProcessing=false
+sinks=GRAPHITE,HBASE
+excludedPathSubstrings=distcp
 #######################################################
 
 home=$(dirname $0)
@@ -65,10 +72,10 @@ create_pidfile $HRAVEN_PID_DIR
 trap 'cleanup_pidfile_and_exit $HRAVEN_PID_DIR' INT TERM EXIT
 
 # Pre-process
-$home/jobFilePreprocessor.sh $hadoopconfdir $historyRawDir $historyProcessingDir $cluster $batchsize
+$home/jobFilePreprocessor.sh $hadoopconfdir $historyDirPattern $historyProcessingDir $cluster $batchsize $excludedPathSubstrings $historyBasePath
 
 # Load
 $home/jobFileLoader.sh $hadoopconfdir $mapredmaxsplitsize $schedulerpoolname $cluster $historyProcessingDir
 
 # Process
-$home/jobFileProcessor.sh $hbaseconfdir $schedulerpoolname $historyProcessingDir $cluster $threads $batchsize
+$home/jobFileProcessor.sh $hbaseconfdir $schedulerpoolname $historyProcessingDir $cluster $threads $batchsize default $sinks $historyProcessingDir $taskHistoryProcessing

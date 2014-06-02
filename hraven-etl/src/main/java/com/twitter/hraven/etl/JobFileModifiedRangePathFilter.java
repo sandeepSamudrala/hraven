@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.JobHistory;
 
 /**
  * Pathfilter that allows only files that are named correctly and are modified
@@ -47,6 +48,8 @@ public class JobFileModifiedRangePathFilter extends JobFilePathFilter {
    * The configuration of this processing job (not the files we are processing).
    */
   private final Configuration myConf;
+
+  private String[] excludedPathSubstring;
   private static Log LOG = LogFactory.getLog(JobFileModifiedRangePathFilter.class);
 
   /**
@@ -64,9 +67,7 @@ public class JobFileModifiedRangePathFilter extends JobFilePathFilter {
    */
   public JobFileModifiedRangePathFilter(Configuration myConf,
       long minModificationTimeMillis, long maxModificationTimeMillis) {
-    this.myConf = myConf;
-    this.minModificationTimeMillis = minModificationTimeMillis;
-    this.maxModificationTimeMillis = maxModificationTimeMillis;
+    this(myConf, minModificationTimeMillis, maxModificationTimeMillis, null);
   }
 
   /**
@@ -84,6 +85,29 @@ public class JobFileModifiedRangePathFilter extends JobFilePathFilter {
     this(myConf, minModificationTimeMillis, Long.MAX_VALUE);
   }
 
+  /**
+   * Constructs a filter that accepts only JobFiles with lastModification time
+   * as least the specified minumum. Also accepts a simple substring to exclude.
+   * 
+   * @param myConf
+   *         used to be able to go from a path to a FileStatus.
+   * @param minModificationTimeMillis
+   *          The minimum modification time of a file to be accepted in
+   *          milliseconds since January 1, 1970 UTC (excluding).
+   * @param maxModificationTimeMillis The
+   *          maximum modification time of a file to be accepted in milliseconds
+   *          since January 1, 1970 UTC (including).
+   * @param excludedPathSubstring
+   *          files with this substring path will be excluded
+   */
+  public JobFileModifiedRangePathFilter(Configuration myConf, long minModificationTimeMillis, long maxModificationTimeMillis,
+      String[] excludedPathSubstring) {
+    this.myConf = myConf;
+    this.minModificationTimeMillis = minModificationTimeMillis;
+    this.maxModificationTimeMillis = maxModificationTimeMillis;
+    this.excludedPathSubstring = excludedPathSubstring;
+  }
+
   /*
    * (non-Javadoc)
    * 
@@ -97,22 +121,35 @@ public class JobFileModifiedRangePathFilter extends JobFilePathFilter {
       return false;
     }
 
-    JobFile jobFile = new JobFile(path.getName());
-    if (jobFile.isJobConfFile() || jobFile.isJobHistoryFile()) {
-      try {
-        FileSystem fs = path.getFileSystem(myConf);
-        FileStatus fileStatus = fs.getFileStatus(path);
-        long fileModificationTimeMillis = fileStatus.getModificationTime();
-        return accept(fileModificationTimeMillis);
-      } catch (IOException e) {
-        throw new ImportException("Cannot determine file modification time of "
-            + path.getName(), e);
-      }
-    } else {
-      // Reject anything that does not match a job conf filename.
-      LOG.info(" Not a valid job conf / job history file "+ path.getName());
-      return false;
+    if (excludePathSubstrings(path)) {
+      JobFile jobFile = new JobFile(path.getName());
+      if (jobFile.isJobConfFile() || jobFile.isJobHistoryFile()) {
+        try {
+          FileSystem fs = path.getFileSystem(myConf);
+          FileStatus fileStatus = fs.getFileStatus(path);
+          long fileModificationTimeMillis = fileStatus.getModificationTime();
+          return accept(fileModificationTimeMillis);
+        } catch (IOException e) {
+          throw new ImportException("Cannot determine file modification time of "
+              + path.getName(), e);
+        }
+      } else {
+        // Reject anything that does not match a job conf filename.
+        LOG.info(" Not a valid job conf / job history file "+ path.getName());
+        return false;
+      }  
     }
+    
+    return false;
+  }
+
+  private boolean excludePathSubstrings(Path path) {
+    for (String s: excludedPathSubstring) {
+      if (path.toString().indexOf(s) != -1)
+        return false;
+    }
+    
+    return true;
   }
 
   /**

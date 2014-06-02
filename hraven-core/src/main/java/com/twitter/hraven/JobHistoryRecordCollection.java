@@ -1,5 +1,8 @@
 package com.twitter.hraven;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -216,5 +219,27 @@ public class JobHistoryRecordCollection extends HravenRecord<JobKey, Object> imp
   @Override
   public void clear() {
     this.valueMap = null;
+  }
+
+  public void write(DataOutput out) throws IOException {
+    super.write(out);
+    
+    out.writeInt(this.size());
+    for (JobHistoryRecord r: this) {
+      r.write(out);
+    }
+  }
+
+  public void readFields(DataInput in) throws IOException {
+    super.readFields(in);
+    
+    int size = in.readInt();
+    int i = 0;
+    while (i < size) {
+      JobHistoryRecord r = new JobHistoryRecord();
+      r.readFields(in);
+      this.add(r);
+      i++;
+    }
   }
 }

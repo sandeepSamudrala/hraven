@@ -1,12 +1,18 @@
 package com.twitter.hraven;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.hadoop.io.ArrayWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.StringUtils;
 
-public class RecordDataKey {
+public class RecordDataKey implements Writable {
   private List<String> components;
 
   public RecordDataKey(String[] components) {
@@ -63,5 +69,17 @@ public class RecordDataKey {
   @Override
   public String toString() {
     return StringUtils.join(Constants.PERIOD_SEP_CHAR, components);
+  }
+
+  @Override
+  public void write(DataOutput out) throws IOException {
+    new ArrayWritable((String[])this.components.toArray()).write(out);
+  }
+
+  @Override
+  public void readFields(DataInput in) throws IOException {
+    ArrayWritable a = new ArrayWritable(Text.class);
+    a.readFields(in);
+    this.components = Arrays.asList(a.toStrings());
   }
 }

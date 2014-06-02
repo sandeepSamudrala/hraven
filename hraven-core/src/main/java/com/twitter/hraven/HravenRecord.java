@@ -1,5 +1,15 @@
 package com.twitter.hraven;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Writable;
+
+import com.twitter.hraven.util.EnumWritable;
+import com.twitter.hraven.util.Serializer;
+
 /**
  * 
  * @author angad.singh
@@ -11,7 +21,7 @@ package com.twitter.hraven;
  * @param <V> type of dataValue object to be stored
  */
 
-public abstract class HravenRecord<K, V> {
+public abstract class HravenRecord<K extends Writable, V> implements Writable{
   private K key;
   private RecordCategory dataCategory;
   private RecordDataKey dataKey;
@@ -120,5 +130,43 @@ public abstract class HravenRecord<K, V> {
   public String toString() {
     return "HravenRecord [key=" + key + ", dataCategory=" + dataCategory + ", dataKey=" + dataKey
         + ", dataValue=" + dataValue + ", submitTime=" + submitTime + "]";
+  }
+  
+  @Override
+  public void write(DataOutput out) throws IOException {
+    //key
+    this.key.write(out);
+    //dataCategory
+    new EnumWritable(this.dataCategory).write(out);
+    //dataKey
+    this.dataKey.write(out);
+    //dataValue
+    byte[] b = Serializer.serialize(this.dataValue);
+    out.writeInt(b.length);
+    out.write(b);
+    //submitTime
+    new LongWritable(this.submitTime).write(out);
+  }
+
+  @Override
+  public void readFields(DataInput in) throws IOException {
+    //key
+    this.key.readFields(in);
+    //dataCategory
+    new EnumWritable(this.dataCategory).readFields(in);
+    //dataKey
+    this.dataKey.readFields(in);
+    //dataValue
+    byte[] b = new byte[in.readInt()];
+    in.readFully(b);
+    try {
+      this.dataValue = (V) Serializer.deserialize(b);
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException("Failure in deserializing HravenRecord.dataValue");
+    }
+    //submitTime
+    LongWritable lw = new LongWritable();
+    lw.readFields(in);
+    this.submitTime = lw.get();
   }
 }

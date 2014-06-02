@@ -17,6 +17,8 @@ package com.twitter.hraven;
 
 import java.text.SimpleDateFormat;
 import java.util.TimeZone;
+import java.util.regex.Pattern;
+
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -43,7 +45,7 @@ public class Constants {
   public static final String UNKNOWN = "";
 
   public static boolean IS_DEV = false;
-  public static String PREFIX = IS_DEV ? "dev." : "";
+  public static String PREFIX = IS_DEV ? "dev." : PROJECT_NAME + ".";
 
   /* **** Table names **** */
   public static String HISTORY_TABLE = PREFIX + "job_history";
@@ -431,6 +433,7 @@ public class Constants {
   public static final String JOBCONF_GRAPHITE_PORT_KEY = "hraven.sink.graphite.port";
   public static final String JOBCONF_GRAPHITE_PREFIX = "hraven.sink.graphite.prefix";
   public static final String JOBCONF_PROCESS_TASKHISTORY = "hraven.conf.processtasks";
+  public static final String JOBCONF_GRAPHITE_USER_FILTER = "hraven.sink.graphite.userfilter";
   
   public static final int GRAPHITE_DEFAULT_PORT = 2003;
   
@@ -439,4 +442,10 @@ public class Constants {
   public static final String GRAPHITE_DEFAULT_HOST = "localhost";
 
   public static final String GRAPHITE_DEFAULT_PREFIX = "DEFAULT";
+  
+  public static final Pattern HADOOPV1HISTORYPATTERN = Pattern.compile("(.*)/done/(.*)/([0-9]{4})/([0-9]{2})/([0-9]{2})/(.*)/(.*)");
+
+  public static final String HRAVEN_HDFS_LIB_PATH_CONF = "hraven.conf.libpath";
+
+  public static final String HADOOP_TMP_JARS_CONF = "tmpjars";
 }

@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.filter.FuzzyRowFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -294,12 +293,12 @@ public class HdfsStatsService {
       fuzzyInfo[i] = 0;
     }
 
-    @SuppressWarnings("unchecked")
-    FuzzyRowFilter rowFilter =
-        new FuzzyRowFilter(Arrays.asList(
-          new Pair<byte[], byte[]>(Bytes.toBytesBinary(rowKey), fuzzyInfo)));
+//    @SuppressWarnings("unchecked")
+//    FuzzyRowFilter rowFilter =
+//        new FuzzyRowFilter(Arrays.asList(
+//          new Pair<byte[], byte[]>(Bytes.toBytesBinary(rowKey), fuzzyInfo)));
 
-    scan.setFilter(rowFilter);
+//    scan.setFilter(rowFilter);
     String minStartKey = Long.toString(getEncodedRunId(starttime));
     String maxEndKey = Long.toString(getEncodedRunId(endtime));
     LOG.info(starttime + " " + getEncodedRunId(starttime) + " min " + minStartKey + " " + endtime

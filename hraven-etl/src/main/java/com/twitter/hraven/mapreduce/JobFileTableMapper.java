@@ -68,6 +68,7 @@ import com.twitter.hraven.etl.JobHistoryFileParserBase;
 import com.twitter.hraven.etl.JobHistoryFileParserFactory;
 import com.twitter.hraven.etl.ProcessRecordService;
 import com.twitter.hraven.etl.Sink;
+import com.twitter.hraven.util.EnumWritable;
 
 /**
  * Takes in results from a scan from {@link ProcessRecordService
@@ -123,7 +124,7 @@ public class JobFileTableMapper extends
    * @return the key class for the job output data.
    */
   public static Class<?> getOutputKeyClass() {
-    return HravenService.class;
+    return EnumWritable.class;
   }
 
   /**
@@ -380,7 +381,7 @@ public class JobFileTableMapper extends
 			throws IOException, InterruptedException {
 		
 	  for (Sink sink: sinks) {
-	    mos.write(sink.name(), service, record);
+	    mos.write(sink.name(), new EnumWritable(service), record);
 	  }
 	}
 

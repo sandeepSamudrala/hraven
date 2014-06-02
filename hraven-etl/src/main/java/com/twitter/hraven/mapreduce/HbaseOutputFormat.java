@@ -27,6 +27,7 @@ import com.twitter.hraven.RecordDataKey;
 import com.twitter.hraven.TaskKey;
 import com.twitter.hraven.datasource.JobKeyConverter;
 import com.twitter.hraven.datasource.TaskKeyConverter;
+import com.twitter.hraven.util.EnumWritable;
 
 /**
  * @author angad.singh Wrapper around Hbase's {@link MultiTableOutputFormat} Converts
@@ -34,9 +35,9 @@ import com.twitter.hraven.datasource.TaskKeyConverter;
  *         corresponding to {@link HravenService}
  */
 
-public class HbaseOutputFormat extends OutputFormat<HravenService, HravenRecord> {
+public class HbaseOutputFormat extends OutputFormat<EnumWritable<HravenService>, HravenRecord> {
 
-  protected static class HravenHbaseRecordWriter extends RecordWriter<HravenService, HravenRecord> {
+  protected static class HravenHbaseRecordWriter extends RecordWriter<EnumWritable<HravenService>, HravenRecord> {
 
     private RecordWriter<ImmutableBytesWritable, Writable> recordWriter;
 
@@ -80,14 +81,15 @@ public class HbaseOutputFormat extends OutputFormat<HravenService, HravenRecord>
      */
 
     @Override
-    public void write(HravenService serviceKey, HravenRecord value) throws IOException,
+    public void write(EnumWritable<HravenService> serviceKey, HravenRecord value) throws IOException,
         InterruptedException {
+      HravenService service = serviceKey.getValue();
       if (value instanceof JobHistoryRecordCollection) {
         for (JobHistoryRecord record : (JobHistoryRecordCollection) value) {
-          writeRecord(serviceKey, record);
+          writeRecord(service, record);
         }
       } else {
-        writeRecord(serviceKey, value);
+        writeRecord(service, value);
       }
     }
 
@@ -110,7 +112,7 @@ public class HbaseOutputFormat extends OutputFormat<HravenService, HravenRecord>
    * Wrap around {@link MultiTableOutputFormat}'s {@link MultiTableRecordWriter}
    */
   @Override
-  public RecordWriter<HravenService, HravenRecord> getRecordWriter(TaskAttemptContext context)
+  public RecordWriter<EnumWritable<HravenService>, HravenRecord> getRecordWriter(TaskAttemptContext context)
       throws IOException, InterruptedException {
     return new HravenHbaseRecordWriter(outputFormat.getRecordWriter(context));
   }

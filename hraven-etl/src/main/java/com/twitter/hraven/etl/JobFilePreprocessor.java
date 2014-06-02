@@ -18,6 +18,8 @@ package com.twitter.hraven.etl;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -137,8 +139,27 @@ public class JobFilePreprocessor extends Configured implements Tool {
         "i",
         "input",
         true,
-        "input directory in hdfs. Default is mapred.job.tracker.history.completed.location.");
+        "Path pattern for mapred.job.tracker.history.completed.location");
     o.setArgName("input-path");
+    o.setRequired(false);
+    options.addOption(o);
+    
+    // Input
+    o = new Option(
+        "bi",
+        "baseinput",
+        true,
+        "Base path for mapred.job.tracker.history.completed.location");
+    o.setArgName("base-path");
+    o.setRequired(false);
+    options.addOption(o);
+
+    // special parameter - specify if month in history folder pattern should start from 00
+    
+    o =
+        new Option("zm", "zeromonth", false,
+            "Pass this option if month in history folder pattern starts from 00");
+    o.setArgName("zeromonth");
     o.setRequired(false);
     options.addOption(o);
 
@@ -171,6 +192,13 @@ public class JobFilePreprocessor extends Configured implements Tool {
     o = new Option("m", "minModificationTimeMillis", true,
             "The minimum modification time of the file to be processed");
     o.setArgName("minModificationTimeMillis");
+    o.setRequired(false);
+    options.addOption(o);
+    
+    // Path substring to exclude from job history files
+    o = new Option("e", "excludedPathSubstring", true,
+            "Comma seperated list of path substrings to exclude from job history files");
+    o.setArgName("excludedPathSubstring");
     o.setRequired(false);
     options.addOption(o);
 
@@ -221,25 +249,45 @@ public class JobFilePreprocessor extends Configured implements Tool {
     // Output should be an hdfs path.
     FileSystem hdfs = FileSystem.get(hbaseConf);
 
-    // Grab the input path argument
-    String output = commandLine.getOptionValue("o");
-    LOG.info(" output=" + output);
-    Path outputPath = new Path(output);
-    FileStatus outputFileStatus = hdfs.getFileStatus(outputPath);
+    // Grab the output path argument
+    String processingDirectory = commandLine.getOptionValue("o");
+    LOG.info("output: " + processingDirectory);
+    Path processingDirectoryPath = new Path(processingDirectory);
 
-    if (!outputFileStatus.isDir()) {
-      throw new IOException("Output is not a directory"
-          + outputFileStatus.getPath().getName());
+    if (!hdfs.exists(processingDirectoryPath)) {
+      hdfs.mkdirs(processingDirectoryPath);
     }
 
     // Grab the input path argument
     String input;
     if (commandLine.hasOption("i")) {
       input = commandLine.getOptionValue("i");
+      
+      if (commandLine.hasOption("zm")) {
+        LOG.info("Changing input path pattern for zero-month folder glitch in hadoop");
+        Matcher matcher = Constants.HADOOPV1HISTORYPATTERN.matcher(input);
+        if (matcher.matches()) {
+          //month is from 00 till 11 for some reason
+          int month = Integer.parseInt(matcher.group(4));
+          input = matcher.replaceFirst("$1/done/$2/$3/" + String.format("%02d", month-1) + "/$5/$6/$7");
+        }  
+      }
     } else {
-      input = hbaseConf.get("mapred.job.tracker.history.completed.location");
+      //input = hbaseConf.get("mapred.job.tracker.history.completed.location");
+      //Use should specify the complete path pattern for the history folder
+      //much more efficient to use globStatus instead
+      throw new RuntimeException("Kindly provide a path pattern for the history folder");
     }
     LOG.info("input=" + input);
+    
+    // Grab the base input argumnt
+    String baseinput;
+    if (commandLine.hasOption("bi")) {
+      baseinput = commandLine.getOptionValue("bi");
+    } else {
+      baseinput = hbaseConf.get("mapred.job.tracker.history.completed.location");
+    }
+    LOG.info("baseinput=" + baseinput);
 
     // Grab the batch-size argument
     int batchSize;
@@ -260,21 +308,24 @@ public class JobFilePreprocessor extends Configured implements Tool {
     } else {
       batchSize = DEFAULT_BATCH_SIZE;
     }
+    
+    LOG.info("Batch size: " + batchSize);
 
     boolean forceAllFiles = commandLine.hasOption("f");
     LOG.info("forceAllFiles: " + forceAllFiles);
 
     Path inputPath = new Path(input);
-    FileStatus inputFileStatus = hdfs.getFileStatus(inputPath);
+    Path baseInputPath = new Path(baseinput);
+    FileStatus baseInputFileStatus = hdfs.getFileStatus(baseInputPath);
 
-    if (!inputFileStatus.isDir()) {
-      throw new IOException("Input is not a directory"
-          + inputFileStatus.getPath().getName());
+    if (!baseInputFileStatus.isDir()) {
+      throw new IOException("Base input is not a directory"
+          + baseInputFileStatus.getPath().getName());
     }
 
     // Grab the cluster argument
     String cluster = commandLine.getOptionValue("c");
-    LOG.info("cluster=" + cluster);
+    LOG.info("cluster: " + cluster);
 
     /**
      * Grab the size of huge files to be moved argument
@@ -284,7 +335,7 @@ public class JobFilePreprocessor extends Configured implements Tool {
      * {@link https://github.com/twitter/hraven/issues/59}
      */
     String maxFileSizeStr = commandLine.getOptionValue("s");
-    LOG.info("maxFileSize=" + maxFileSizeStr);
+    LOG.info("maxFileSize: " + maxFileSizeStr);
     long maxFileSize = DEFAULT_RAW_FILE_SIZE_LIMIT;
     try {
       maxFileSize = Long.parseLong(maxFileSizeStr);
@@ -296,13 +347,18 @@ public class JobFilePreprocessor extends Configured implements Tool {
     // Grab the minModificationTimeMillis argument
     long minModificationTimeMillis = 0;
     
-    try {
-      minModificationTimeMillis = Long.parseLong(commandLine.getOptionValue("m"));
-    } catch (NumberFormatException nfe) {
-      throw new IllegalArgumentException(
-          "minModificationTimeMillis has to be an epoch time (long). Can't be: "
-              + commandLine.getOptionValue("m"), nfe);
+    if (commandLine.getOptionValue("m") != null) {
+      try {
+        minModificationTimeMillis = Long.parseLong(commandLine.getOptionValue("m"));
+        LOG.info("Using specified start time for filtering history files: " + minModificationTimeMillis);
+      } catch (NumberFormatException nfe) {
+        throw new IllegalArgumentException(
+            "minModificationTimeMillis has to be an epoch time (long). Can't be: "
+                + commandLine.getOptionValue("m"), nfe);
+      }  
     }
+    
+    LOG.info("minModificationTimeMillis: " + minModificationTimeMillis);
 
     ProcessRecordService processRecordService = new ProcessRecordService(
         hbaseConf);
@@ -315,7 +371,7 @@ public class JobFilePreprocessor extends Configured implements Tool {
 
       if (!forceAllFiles) {
         lastProcessRecord = processRecordService
-            .getLastSuccessfulProcessRecord(cluster);
+            .getLastSuccessfulProcessRecord(cluster, processingDirectory);
       } else {
         //discard minModificationTimeMillis arguemnt given if all files
         //are to be forced.
@@ -324,12 +380,14 @@ public class JobFilePreprocessor extends Configured implements Tool {
 
       // Start of this time period is the end of the last period.
       if (lastProcessRecord != null) {
-        // Honour the minModificationTimeMillis option argument given
+        LOG.info("lastProcessRecord time: " + lastProcessRecord.getMaxModificationTimeMillis());
         // Choose the maximum of the two.
         if (minModificationTimeMillis < lastProcessRecord
             .getMaxModificationTimeMillis()) {
           minModificationTimeMillis = lastProcessRecord
               .getMaxModificationTimeMillis();
+          LOG.info("lastProcessRecord is greater than minModificationTimeMillis. Using that as minimum time: "
+              + minModificationTimeMillis);
         }
       }
 
@@ -337,22 +395,35 @@ public class JobFilePreprocessor extends Configured implements Tool {
       // than when we started processing.
       if (minModificationTimeMillis > processingStartMillis) {
         throw new RuntimeException(
-            "The last processing record has maxModificationMillis later than now: "
+            "Job start time is lesser than the minimum modification time of files to read. Failing."
                 + lastProcessRecord);
       }
 
+      // Grap the excludedPathSubstring
+      String[] excludedPathSubstring = null;
+      
+      if (commandLine.getOptionValue("e") != null) {
+        try {
+          excludedPathSubstring = commandLine.getOptionValue("e").split(",");  
+          LOG.info("excludedPathSubstring: " + Arrays.toString(excludedPathSubstring));
+        } catch (Exception e) {
+          throw new RuntimeException(
+              "Please provide a comma seperated list of excludedPathSubstrings. This is invalid: "
+                  + commandLine.getOptionValue("e"));
+        }
+      }
+      
       // Accept only jobFiles and only those that fall in the desired range of
       // modification time.
       JobFileModifiedRangePathFilter jobFileModifiedRangePathFilter = new JobFileModifiedRangePathFilter(
-          hbaseConf, minModificationTimeMillis);
+          hbaseConf, minModificationTimeMillis, Long.MAX_VALUE, excludedPathSubstring);
 
       String timestamp = Constants.TIMESTAMP_FORMAT.format(new Date(
           minModificationTimeMillis));
 
-      ContentSummary contentSummary = hdfs.getContentSummary(inputPath);
-      LOG.info("Listing / filtering ("
-          + contentSummary.getFileCount() + ") files in: " + inputPath
-          + " that are modified since " + timestamp);
+      ContentSummary contentSummary = hdfs.getContentSummary(baseInputPath);
+      LOG.info("Listing / filtering " + contentSummary.getFileCount() + " files in: " + inputPath
+          + " (" + baseInputPath + ") that are modified since " + timestamp + "(" + minModificationTimeMillis + ")");
 
       // get the files in the done folder,
       // need to traverse dirs under done recursively for versions
@@ -370,14 +441,14 @@ public class JobFilePreprocessor extends Configured implements Tool {
       LOG.info("Batch count: " + batchCount);
       for (int b = 0; b < batchCount; b++) {
         processBatch(jobFileStatusses, b, batchSize, processRecordService,
-            cluster, outputPath);
+            cluster, processingDirectoryPath);
       }
 
     } finally {
       processRecordService.close();
     }
 
-    Statistics statistics = FileSystem.getStatistics(inputPath.toUri()
+    Statistics statistics = FileSystem.getStatistics(baseInputPath.toUri()
         .getScheme(), hdfs.getClass());
     if (statistics != null) {
       LOG.info("HDFS bytes read: " + statistics.getBytesRead());
@@ -472,14 +543,10 @@ public class JobFilePreprocessor extends Configured implements Tool {
    * 
    * @param args
    *          the arguments to do it with
+   * @throws Exception 
    */
-  public static void main(String[] args) {
-    try {
-      ToolRunner.run(new JobFilePreprocessor(), args);
-    } catch (Exception e) {
-      e.printStackTrace();
-      LOG.error("Error running job.", e);
-    }
+  public static void main(String[] args) throws Exception {
+    ToolRunner.run(new JobFilePreprocessor(), args);
   }
 
 }

@@ -32,7 +32,7 @@ public class GraphiteHistoryWriter {
   private final Pattern APPID_PATTERN_OOZIE_LAUNCHER = Pattern
       .compile("oozie:launcher:T=(.*):W=(.*):A=(.*):ID=(.*)");
   private final Pattern APPID_PATTERN_PIGJOB = Pattern.compile("PigLatin:(.*).pig");
-  private static final Pattern GRAPHITE_KEY_FILTER = Pattern.compile("[./\\\\\\-\\s]+");
+  private static final String GRAPHITE_KEY_FILTER = "[./\\\\\\s]";
   private static final int PIG_ALIAS_FINGERPRINT_LENGTH = 100;
   
   private static final String submitTimeKey = JobHistoryKeys.SUBMIT_TIME.toString().toLowerCase();
@@ -45,12 +45,14 @@ public class GraphiteHistoryWriter {
   private JobHistoryRecordCollection recordCollection;
   private String PREFIX;
   private StringBuilder lines;
+  private List<String> userFilter;
 
   /**
    * Writes a single {@link JobHistoryRecord} to the specified {@link HravenService} Passes the
    * large multi record of which this record is a part of, so that we can get other contextual
    * attributes to use in the graphite metric naming scheme
    * @param serviceKey
+   * @param userFilter 
    * @param jobRecord
    * @param multiRecord
    * @throws IOException
@@ -58,11 +60,13 @@ public class GraphiteHistoryWriter {
    */
 
   public GraphiteHistoryWriter(String prefix, HravenService serviceKey,
-      JobHistoryRecordCollection recordCollection, StringBuilder sb) {
+      JobHistoryRecordCollection recordCollection, StringBuilder sb, String userFilter) {
     this.service = serviceKey;
     this.recordCollection = recordCollection;
     this.PREFIX = prefix;
     this.lines = sb;
+    if (StringUtils.isNotEmpty(userFilter))
+      this.userFilter = Arrays.asList(userFilter.split(","));
   }
 
   public int write() throws IOException {
@@ -74,63 +78,67 @@ public class GraphiteHistoryWriter {
      */
 
     int lineCount = 0;
-    Framework framework = getFramework(recordCollection);
-    String metricsPathPrefix;
-
-    String pigAliasFp = getPigAliasFingerprint(recordCollection);
-
-    if (framework == Framework.PIG && pigAliasFp != null) {
-      // TODO: should ideally include app version too, but PIG-2587's pig.logical.plan.signature
-      // which hraven uses was available only from pig 0.11
-      metricsPathPrefix =
-          generatePathPrefix(PREFIX, recordCollection.getKey().getCluster(), recordCollection.getKey()
-              .getUserName(), genAppId(recordCollection, recordCollection.getKey().getAppId()), pigAliasFp).toString();
-    } else {
-      metricsPathPrefix =
-          generatePathPrefix(PREFIX, recordCollection.getKey().getCluster(), recordCollection.getKey()
-              .getUserName(), genAppId(recordCollection, recordCollection.getKey().getAppId())).toString();
-    }
     
-    // Round the timestamp to second as Graphite accepts it in such
-    // a format.
-    int timestamp = Math.round(recordCollection.getSubmitTime() / 1000);
-    
-    // For now, relies on receiving job history and job conf as part of the same
-    // JobHistoryMultiRecord
-    for (JobHistoryRecord jobRecord : recordCollection) {
-      if (service == HravenService.JOB_HISTORY
-          && (jobRecord.getDataCategory() == RecordCategory.HISTORY_COUNTER || jobRecord
-              .getDataCategory() == RecordCategory.INFERRED)
-          && !(jobRecord.getDataKey().get(0).equals(submitTimeKey)
-              || jobRecord.getDataKey().get(0).equals(launchTimeKey) || jobRecord.getDataKey()
-              .get(0).equals(finishTimeKey))) {
+    //skip if does not match userFilter
+    if (this.userFilter.contains(recordCollection.getKey().getUserName())) {
+      Framework framework = getFramework(recordCollection);
+      String metricsPathPrefix;
 
-        lineCount++;
-        lines.append(metricsPathPrefix);
+      String pigAliasFp = getPigAliasFingerprint(recordCollection);
 
-        for (String comp : jobRecord.getDataKey().getComponents()) {
-          lines.append(".").append(sanitize(comp));
+      if (framework == Framework.PIG && pigAliasFp != null) {
+        // TODO: should ideally include app version too, but PIG-2587's pig.logical.plan.signature
+        // which hraven uses was available only from pig 0.11
+        metricsPathPrefix =
+            generatePathPrefix(PREFIX, recordCollection.getKey().getCluster(), recordCollection.getKey()
+                .getUserName(), genAppId(recordCollection, recordCollection.getKey().getAppId()), pigAliasFp).toString();
+      } else {
+        metricsPathPrefix =
+            generatePathPrefix(PREFIX, recordCollection.getKey().getCluster(), recordCollection.getKey()
+                .getUserName(), genAppId(recordCollection, recordCollection.getKey().getAppId())).toString();
+      }
+      
+      // Round the timestamp to second as Graphite accepts it in such
+      // a format.
+      int timestamp = Math.round(recordCollection.getSubmitTime() / 1000);
+      
+      // For now, relies on receiving job history and job conf as part of the same
+      // JobHistoryMultiRecord
+      for (JobHistoryRecord jobRecord : recordCollection) {
+        if (service == HravenService.JOB_HISTORY
+            && (jobRecord.getDataCategory() == RecordCategory.HISTORY_COUNTER || jobRecord
+                .getDataCategory() == RecordCategory.INFERRED)
+            && !(jobRecord.getDataKey().get(0).equals(submitTimeKey)
+                || jobRecord.getDataKey().get(0).equals(launchTimeKey) || jobRecord.getDataKey()
+                .get(0).equals(finishTimeKey))) {
+
+          lineCount++;
+          lines.append(metricsPathPrefix);
+
+          for (String comp : jobRecord.getDataKey().getComponents()) {
+            lines.append(".").append(sanitize(comp));
+          }
+
+          lines.append(" ").append(jobRecord.getDataValue()).append(" ")
+              .append(timestamp).append("\n");
         }
-
-        lines.append(" ").append(jobRecord.getDataValue()).append(" ")
-            .append(timestamp).append("\n");
+      }
+      
+      //handle run times
+      Long finishTime = (Long)recordCollection.getValue(RecordCategory.HISTORY_COUNTER, new RecordDataKey(finishTimeKey));
+      Long launchTime = (Long)recordCollection.getValue(RecordCategory.HISTORY_COUNTER, new RecordDataKey(launchTimeKey));
+      
+      if (finishTime != null && recordCollection.getSubmitTime() != null) {
+        lines.append(metricsPathPrefix + ".").append(totalTimeKey + " " + (finishTime-recordCollection.getSubmitTime()) + " " + timestamp + "\n");
+        lineCount++;
+      }
+      
+      if (finishTime != null && launchTime != null) {
+        lines.append(metricsPathPrefix + ".").append(runTimeKey + " " + (finishTime-launchTime) + " " + timestamp + "\n");
+        lineCount++;
       }
     }
     
-    //handle run times
-    Long finishTime = (Long)recordCollection.getValue(RecordCategory.HISTORY_COUNTER, new RecordDataKey(finishTimeKey));
-    Long launchTime = (Long)recordCollection.getValue(RecordCategory.HISTORY_COUNTER, new RecordDataKey(launchTimeKey));
-    
-    if (finishTime != null && recordCollection.getSubmitTime() != null) {
-      lines.append(metricsPathPrefix + ".").append(totalTimeKey + " " + (finishTime-recordCollection.getSubmitTime()) + " " + timestamp + "\n");
-      lineCount++;
-    }
-    
-    if (finishTime != null && launchTime != null) {
-      lines.append(metricsPathPrefix + ".").append(runTimeKey + " " + (finishTime-launchTime) + " " + timestamp + "\n");
-      lineCount++;
-    }
-
     return lineCount;
   }
 
@@ -225,14 +233,7 @@ public class GraphiteHistoryWriter {
    * @throws UnsupportedEncodingException
    */
   private String sanitize(String s) {
-    String sanitized = s;
-    Matcher m = GRAPHITE_KEY_FILTER.matcher(s);
-    
-    if (m.matches()) {
-      sanitized = m.replaceAll("_");
-    }
-    
-    return sanitized.toLowerCase();
+    return s.replaceAll(GRAPHITE_KEY_FILTER, "_");
   }
 
   /**

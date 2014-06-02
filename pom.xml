@@ -16,7 +16,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.twitter.hraven</groupId>
   <artifactId>hraven</artifactId>
-  <version>0.9.15-SNAPSHOT</version>
+  <version>0.9.16-SNAPSHOT</version>
   <name>hRaven Project</name>
   <url>https://github.com/twitter/hraven</url>
   <description>
@@ -97,6 +97,10 @@
         <enabled>true</enabled>
       </snapshots>
      </repository>
+     <repository>
+		<id>cdh3u5</id>
+		<url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
+	</repository>
   </repositories>
 
   <issueManagement>
@@ -120,7 +124,7 @@
   <properties>
     <compileSource>1.6</compileSource>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <hbase.version>0.94.10</hbase.version>
+    <hbase.version>0.90.6-cdh3u5</hbase.version>
     <hadoop.version>1.0.4</hadoop.version>
 
     <commons-logging.version>1.1.1</commons-logging.version>

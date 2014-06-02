@@ -15,6 +15,13 @@ limitations under the License.
 */
 package com.twitter.hraven;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+
 /**
  * The job ID should be relatively unique, unless two clusters start at the same
  * time. However, given a jobId it is not immediately clear which cluster a job
@@ -22,12 +29,12 @@ package com.twitter.hraven;
  * current one). This class represents the fully qualified job identifier.
  * 
  */
-public class QualifiedJobId extends JobId {
+public class QualifiedJobId extends JobId implements Writable {
 
   /**
    * The Hadoop cluster on which the job ran.
    */
-  private final String cluster;
+  private String cluster;
 
   /**
    * Constructor.
@@ -50,6 +57,18 @@ public class QualifiedJobId extends JobId {
    */
   public String getCluster() {
     return cluster;
+  }
+
+  @Override
+  public void write(DataOutput out) throws IOException {
+    super.write(out);
+    Text.writeString(out, this.cluster);
+  }
+
+  @Override
+  public void readFields(DataInput in) throws IOException {
+    super.readFields(in);
+    this.cluster = Text.readString(in);
   }
 
 }

@@ -29,12 +29,13 @@ import com.twitter.hraven.JobHistoryRecordCollection;
 import com.twitter.hraven.JobHistoryRecord;
 import com.twitter.hraven.JobKey;
 import com.twitter.hraven.RecordCategory;
+import com.twitter.hraven.util.EnumWritable;
 
 /**
  * @author angad.singh {@link OutputFormat} for sending metrics to graphite
  */
 
-public class GraphiteOutputFormat extends OutputFormat<HravenService, HravenRecord> {
+public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenService>, HravenRecord> {
 
   private static Log LOG = LogFactory.getLog(GraphiteOutputFormat.class);
   private static Writer writer;
@@ -67,13 +68,14 @@ public class GraphiteOutputFormat extends OutputFormat<HravenService, HravenReco
 
   }
 
-  protected static class GraphiteRecordWriter extends RecordWriter<HravenService, HravenRecord> {
+  protected static class GraphiteRecordWriter extends RecordWriter<EnumWritable<HravenService>, HravenRecord> {
 
     private String METRIC_PREFIX;
-    private int outputCount = 0;
+    private String userFilter;
 
-    public GraphiteRecordWriter(String host, int port, String prefix) throws IOException {
-      METRIC_PREFIX = prefix;
+    public GraphiteRecordWriter(String host, int port, String prefix, String userFilter) throws IOException {
+      this.METRIC_PREFIX = prefix;
+      this.userFilter = userFilter;
 
       try {
         // Open an connection to Graphite server.
@@ -90,8 +92,9 @@ public class GraphiteOutputFormat extends OutputFormat<HravenService, HravenReco
      */
 
     @Override
-    public void write(HravenService serviceKey, HravenRecord value) throws IOException,
+    public void write(EnumWritable<HravenService> serviceKey, HravenRecord value) throws IOException,
         InterruptedException {
+      HravenService service = serviceKey.getValue();
       JobHistoryRecordCollection recordCollection;
 
       if (value instanceof JobHistoryRecordCollection) {
@@ -104,7 +107,8 @@ public class GraphiteOutputFormat extends OutputFormat<HravenService, HravenReco
       int lines = 0;
 
       try {
-        GraphiteHistoryWriter graphiteWriter = new GraphiteHistoryWriter(METRIC_PREFIX, serviceKey, recordCollection, output);
+        GraphiteHistoryWriter graphiteWriter =
+            new GraphiteHistoryWriter(METRIC_PREFIX, service, recordCollection, output, userFilter);
         lines = graphiteWriter.write();
       } catch (Exception e) {
         LOG.error("Error generating metrics for graphite", e);
@@ -148,13 +152,13 @@ public class GraphiteOutputFormat extends OutputFormat<HravenService, HravenReco
    * Output a custom {@link GraphiteRecordWriter} to send metrics to graphite
    */
   @Override
-  public RecordWriter<HravenService, HravenRecord> getRecordWriter(TaskAttemptContext context)
+  public RecordWriter<EnumWritable<HravenService>, HravenRecord> getRecordWriter(TaskAttemptContext context)
       throws IOException, InterruptedException {
     Configuration conf = context.getConfiguration();
     return new GraphiteRecordWriter(conf.get(Constants.JOBCONF_GRAPHITE_HOST_KEY,
       Constants.GRAPHITE_DEFAULT_HOST), conf.getInt(Constants.JOBCONF_GRAPHITE_PORT_KEY,
       Constants.GRAPHITE_DEFAULT_PORT), conf.get(Constants.JOBCONF_GRAPHITE_PREFIX,
-      Constants.GRAPHITE_DEFAULT_PREFIX));
+      Constants.GRAPHITE_DEFAULT_PREFIX), conf.get(Constants.JOBCONF_GRAPHITE_USER_FILTER));
   }
 
 }

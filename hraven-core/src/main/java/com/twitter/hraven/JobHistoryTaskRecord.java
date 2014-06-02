@@ -1,5 +1,9 @@
 package com.twitter.hraven;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
 /**
  * @author angad.singh Abstraction of a record to be stored in the
  *         {@link HravenService#JOB_HISTORY_TASK} service.
@@ -33,5 +37,13 @@ public class JobHistoryTaskRecord extends HravenRecord<TaskKey, Object> {
     this.setDataCategory(category);
     this.setDataKey(key);
     this.setDataValue(value);
+  }
+
+  public void write(DataOutput out) throws IOException {
+    super.write(out);
+  }
+
+  public void readFields(DataInput in) throws IOException {
+    super.readFields(in);
   }
 }
