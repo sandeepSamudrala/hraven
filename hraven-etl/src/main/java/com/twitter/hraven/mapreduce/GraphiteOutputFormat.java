@@ -72,10 +72,12 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
 
     private String METRIC_PREFIX;
     private String userFilter;
+    private String queueFilter;
 
-    public GraphiteRecordWriter(String host, int port, String prefix, String userFilter) throws IOException {
+    public GraphiteRecordWriter(String host, int port, String prefix, String userFilter, String queueFilter) throws IOException {
       this.METRIC_PREFIX = prefix;
       this.userFilter = userFilter;
+      this.queueFilter = queueFilter;
 
       try {
         // Open an connection to Graphite server.
@@ -108,7 +110,7 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
 
       try {
         GraphiteHistoryWriter graphiteWriter =
-            new GraphiteHistoryWriter(METRIC_PREFIX, service, recordCollection, output, userFilter);
+            new GraphiteHistoryWriter(METRIC_PREFIX, service, recordCollection, output, userFilter, queueFilter);
         lines = graphiteWriter.write();
       } catch (Exception e) {
         LOG.error("Error generating metrics for graphite", e);
@@ -158,7 +160,7 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
     return new GraphiteRecordWriter(conf.get(Constants.JOBCONF_GRAPHITE_HOST_KEY,
       Constants.GRAPHITE_DEFAULT_HOST), conf.getInt(Constants.JOBCONF_GRAPHITE_PORT_KEY,
       Constants.GRAPHITE_DEFAULT_PORT), conf.get(Constants.JOBCONF_GRAPHITE_PREFIX,
-      Constants.GRAPHITE_DEFAULT_PREFIX), conf.get(Constants.JOBCONF_GRAPHITE_USER_FILTER));
+      Constants.GRAPHITE_DEFAULT_PREFIX), conf.get(Constants.JOBCONF_GRAPHITE_USER_FILTER), conf.get(Constants.JOBCONF_GRAPHITE_QUEUE_FILTER));
   }
 
 }

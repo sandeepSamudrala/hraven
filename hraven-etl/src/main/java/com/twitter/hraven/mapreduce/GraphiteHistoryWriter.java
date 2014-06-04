@@ -29,15 +29,16 @@ public class GraphiteHistoryWriter {
 
   private static Log LOG = LogFactory.getLog(GraphiteHistoryWriter.class);
 
-  private final Pattern APPID_PATTERN_OOZIE_LAUNCHER = Pattern
-      .compile("oozie:launcher:T=(.*):W=(.*):A=(.*):ID=(.*)");
+  private final Pattern APPID_PATTERN_OOZIE_LAUNCHER = Pattern.compile("oozie:launcher:T=(.*):W=(.*):A=(.*):ID=(.*)");
+  private final Pattern APPID_PATTERN_OOZIE_ACTION = Pattern.compile("oozie:action:T=(.*):W=(.*):A=(.*):ID=[0-9]{7}-[0-9]{15}-oozie-oozi-W-(.*)");
   private final Pattern APPID_PATTERN_PIGJOB = Pattern.compile("PigLatin:(.*).pig");
   private static final String GRAPHITE_KEY_FILTER = "[./\\\\\\s]";
   private static final int PIG_ALIAS_FINGERPRINT_LENGTH = 100;
+  private static final String[] EXCLUDED_COMPONENTS = new String[] {"MultiInputCounters"};
   
-  private static final String submitTimeKey = JobHistoryKeys.SUBMIT_TIME.toString().toLowerCase();
-  private static final String launchTimeKey = JobHistoryKeys.LAUNCH_TIME.toString().toLowerCase();
-  private static final String finishTimeKey = JobHistoryKeys.FINISH_TIME.toString().toLowerCase();
+  private static final String submitTimeKey = JobHistoryKeys.SUBMIT_TIME.toString();
+  private static final String launchTimeKey = JobHistoryKeys.LAUNCH_TIME.toString();
+  private static final String finishTimeKey = JobHistoryKeys.FINISH_TIME.toString();
   private static final String totalTimeKey = "total_time";
   private static final String runTimeKey = "run_time";
 
@@ -46,6 +47,7 @@ public class GraphiteHistoryWriter {
   private String PREFIX;
   private StringBuilder lines;
   private List<String> userFilter;
+  private List<String> queueFilter;
 
   /**
    * Writes a single {@link JobHistoryRecord} to the specified {@link HravenService} Passes the
@@ -60,13 +62,15 @@ public class GraphiteHistoryWriter {
    */
 
   public GraphiteHistoryWriter(String prefix, HravenService serviceKey,
-      JobHistoryRecordCollection recordCollection, StringBuilder sb, String userFilter) {
+      JobHistoryRecordCollection recordCollection, StringBuilder sb, String userFilter, String queueFilter) {
     this.service = serviceKey;
     this.recordCollection = recordCollection;
     this.PREFIX = prefix;
     this.lines = sb;
     if (StringUtils.isNotEmpty(userFilter))
       this.userFilter = Arrays.asList(userFilter.split(","));
+    if (StringUtils.isNotEmpty(queueFilter))
+      this.queueFilter = Arrays.asList(queueFilter.split(","));
   }
 
   public int write() throws IOException {
@@ -80,7 +84,10 @@ public class GraphiteHistoryWriter {
     int lineCount = 0;
     
     //skip if does not match userFilter
-    if (this.userFilter.contains(recordCollection.getKey().getUserName())) {
+    if ( (this.userFilter == null || this.userFilter.contains(recordCollection.getKey().getUserName()))
+        && (this.queueFilter == null || this.queueFilter.contains(recordCollection.getValue(RecordCategory.CONF_META, new RecordDataKey(
+        Constants.HRAVEN_QUEUE))))
+        ) {
       Framework framework = getFramework(recordCollection);
       String metricsPathPrefix;
 
@@ -108,25 +115,39 @@ public class GraphiteHistoryWriter {
         if (service == HravenService.JOB_HISTORY
             && (jobRecord.getDataCategory() == RecordCategory.HISTORY_COUNTER || jobRecord
                 .getDataCategory() == RecordCategory.INFERRED)
-            && !(jobRecord.getDataKey().get(0).equals(submitTimeKey)
-                || jobRecord.getDataKey().get(0).equals(launchTimeKey) || jobRecord.getDataKey()
-                .get(0).equals(finishTimeKey))) {
+            && !(jobRecord.getDataKey().get(0).equalsIgnoreCase(submitTimeKey)
+                || jobRecord.getDataKey().get(0).equalsIgnoreCase(launchTimeKey) || jobRecord.getDataKey()
+                .get(0).equalsIgnoreCase(finishTimeKey))) {
 
           lineCount++;
-          lines.append(metricsPathPrefix);
+          StringBuilder line = new StringBuilder();
+          line.append(metricsPathPrefix);
 
+          boolean ignoreRecord = false;
           for (String comp : jobRecord.getDataKey().getComponents()) {
-            lines.append(".").append(sanitize(comp));
+            if (Arrays.asList(EXCLUDED_COMPONENTS).contains(comp)) {
+              ignoreRecord = true;
+              break;
+            }
+            line.append(".").append(sanitize(comp));
           }
+          
+          if (ignoreRecord)
+            continue;
 
-          lines.append(" ").append(jobRecord.getDataValue()).append(" ")
+          line.append(" ").append(jobRecord.getDataValue()).append(" ")
               .append(timestamp).append("\n");
+          lines.append(line);
         }
       }
       
       //handle run times
       Long finishTime = (Long)recordCollection.getValue(RecordCategory.HISTORY_COUNTER, new RecordDataKey(finishTimeKey));
+      if (finishTime == null)
+        finishTime = (Long)recordCollection.getValue(RecordCategory.HISTORY_COUNTER, new RecordDataKey(finishTimeKey.toLowerCase()));
       Long launchTime = (Long)recordCollection.getValue(RecordCategory.HISTORY_COUNTER, new RecordDataKey(launchTimeKey));
+      if (launchTime == null)
+        launchTime = (Long)recordCollection.getValue(RecordCategory.HISTORY_COUNTER, new RecordDataKey(launchTimeKey.toLowerCase()));
       
       if (finishTime != null && recordCollection.getSubmitTime() != null) {
         lines.append(metricsPathPrefix + ".").append(totalTimeKey + " " + (finishTime-recordCollection.getSubmitTime()) + " " + timestamp + "\n");
@@ -177,10 +198,9 @@ public class GraphiteHistoryWriter {
     } else if (APPID_PATTERN_OOZIE_LAUNCHER.matcher(appId).matches()) {
       // ozl:{oozie-workflow-name}
       appId = APPID_PATTERN_OOZIE_LAUNCHER.matcher(appId).replaceAll("ozl:$2");
-    } else {
-      if (oozieActionName != null) {
-        return oozieActionName + ":" + appId;
-      }
+    } else if (APPID_PATTERN_OOZIE_ACTION.matcher(appId).matches()) {
+      // oza:{oozie-workflow-name}:{oozie-action-name}
+      appId = APPID_PATTERN_OOZIE_ACTION.matcher(appId).replaceAll("oza:$2:$3:$4");
     }
 
     return appId;

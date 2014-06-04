@@ -50,7 +50,7 @@ import com.twitter.hraven.datasource.ProcessingException;
 import com.twitter.hraven.etl.ProcessRecordService;
 import com.twitter.hraven.util.BatchUtil;
 import com.twitter.hraven.etl.FileLister;
-import com.twitter.hraven.etl.JobFileModifiedRangePathFilter;
+import com.twitter.hraven.etl.JobFileModifiedRangeSubstringPathFilter;
 
 /**
  * Command line tool that can be run on a periodic basis (like daily, hourly, or
@@ -196,9 +196,16 @@ public class JobFilePreprocessor extends Configured implements Tool {
     options.addOption(o);
     
     // Path substring to exclude from job history files
-    o = new Option("e", "excludedPathSubstring", true,
+    o = new Option("ex", "pathExclusionFilter", true,
             "Comma seperated list of path substrings to exclude from job history files");
-    o.setArgName("excludedPathSubstring");
+    o.setArgName("pathExclusionFilter");
+    o.setRequired(false);
+    options.addOption(o);
+    
+    // Path substring to include in job history files (inclusions take precedence over exclusions)
+    o = new Option("ix", "pathInclusionFilter", true,
+            "Comma seperated list of path substrings to include in job history files");
+    o.setArgName("pathInclusionFilter");
     o.setRequired(false);
     options.addOption(o);
 
@@ -399,24 +406,37 @@ public class JobFilePreprocessor extends Configured implements Tool {
                 + lastProcessRecord);
       }
 
-      // Grap the excludedPathSubstring
-      String[] excludedPathSubstring = null;
+      // Grap the pathExclusionFilter and pathInclusionFilter
+      String[] pathExclusionFilter = null;
       
-      if (commandLine.getOptionValue("e") != null) {
+      if (commandLine.getOptionValue("ex") != null) {
         try {
-          excludedPathSubstring = commandLine.getOptionValue("e").split(",");  
-          LOG.info("excludedPathSubstring: " + Arrays.toString(excludedPathSubstring));
+          pathExclusionFilter = commandLine.getOptionValue("ex").split(",");  
+          LOG.info("pathExclusionFilter: " + Arrays.toString(pathExclusionFilter));
         } catch (Exception e) {
           throw new RuntimeException(
-              "Please provide a comma seperated list of excludedPathSubstrings. This is invalid: "
-                  + commandLine.getOptionValue("e"));
+              "Please provide a comma seperated list of substrings to exclude. This is invalid: "
+                  + commandLine.getOptionValue("ex"));
+        }
+      }
+      
+      String[] pathInclusionFilter = null;
+      
+      if (commandLine.getOptionValue("ix") != null) {
+        try {
+          pathInclusionFilter = commandLine.getOptionValue("ix").split(",");  
+          LOG.info("pathInclusionFilter: " + Arrays.toString(pathInclusionFilter));
+        } catch (Exception e) {
+          throw new RuntimeException(
+              "Please provide a comma seperated list of substrings to include. This is invalid: "
+                  + commandLine.getOptionValue("ix"));
         }
       }
       
       // Accept only jobFiles and only those that fall in the desired range of
       // modification time.
-      JobFileModifiedRangePathFilter jobFileModifiedRangePathFilter = new JobFileModifiedRangePathFilter(
-          hbaseConf, minModificationTimeMillis, Long.MAX_VALUE, excludedPathSubstring);
+      JobFileModifiedRangeSubstringPathFilter jobFileModifiedRangePathFilter = new JobFileModifiedRangeSubstringPathFilter(
+          hbaseConf, minModificationTimeMillis, Long.MAX_VALUE, pathExclusionFilter, pathInclusionFilter);
 
       String timestamp = Constants.TIMESTAMP_FORMAT.format(new Date(
           minModificationTimeMillis));

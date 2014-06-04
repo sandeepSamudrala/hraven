@@ -30,7 +30,7 @@ import org.apache.hadoop.mapred.JobHistory;
  * within a certain time range.
  * 
  */
-public class JobFileModifiedRangePathFilter extends JobFilePathFilter {
+public class JobFileModifiedRangeSubstringPathFilter extends JobFilePathFilter {
 
   /**
    * The minimum modification time of a file to be accepted in milliseconds
@@ -49,8 +49,11 @@ public class JobFileModifiedRangePathFilter extends JobFilePathFilter {
    */
   private final Configuration myConf;
 
-  private String[] excludedPathSubstring;
-  private static Log LOG = LogFactory.getLog(JobFileModifiedRangePathFilter.class);
+  private String[] pathExclusionFilter;
+
+  private String[] pathInclusionFilter;
+  
+  private static Log LOG = LogFactory.getLog(JobFileModifiedRangeSubstringPathFilter.class);
 
   /**
    * Constructs a filter that accepts only JobFiles with lastModification time
@@ -65,9 +68,9 @@ public class JobFileModifiedRangePathFilter extends JobFilePathFilter {
    *          maximum modification time of a file to be accepted in milliseconds
    *          since January 1, 1970 UTC (including).
    */
-  public JobFileModifiedRangePathFilter(Configuration myConf,
+  public JobFileModifiedRangeSubstringPathFilter(Configuration myConf,
       long minModificationTimeMillis, long maxModificationTimeMillis) {
-    this(myConf, minModificationTimeMillis, maxModificationTimeMillis, null);
+    this(myConf, minModificationTimeMillis, maxModificationTimeMillis, null, null);
   }
 
   /**
@@ -80,7 +83,7 @@ public class JobFileModifiedRangePathFilter extends JobFilePathFilter {
    *          The minimum modification time of a file to be accepted in
    *          milliseconds since January 1, 1970 UTC (excluding).
    */
-  public JobFileModifiedRangePathFilter(Configuration myConf,
+  public JobFileModifiedRangeSubstringPathFilter(Configuration myConf,
       long minModificationTimeMillis) {
     this(myConf, minModificationTimeMillis, Long.MAX_VALUE);
   }
@@ -97,15 +100,16 @@ public class JobFileModifiedRangePathFilter extends JobFilePathFilter {
    * @param maxModificationTimeMillis The
    *          maximum modification time of a file to be accepted in milliseconds
    *          since January 1, 1970 UTC (including).
-   * @param excludedPathSubstring
+   * @param pathExclusionFilter
    *          files with this substring path will be excluded
    */
-  public JobFileModifiedRangePathFilter(Configuration myConf, long minModificationTimeMillis, long maxModificationTimeMillis,
-      String[] excludedPathSubstring) {
+  public JobFileModifiedRangeSubstringPathFilter(Configuration myConf, long minModificationTimeMillis, long maxModificationTimeMillis,
+      String[] pathExclusionFilter, String[] pathInclusionFilter) {
     this.myConf = myConf;
     this.minModificationTimeMillis = minModificationTimeMillis;
     this.maxModificationTimeMillis = maxModificationTimeMillis;
-    this.excludedPathSubstring = excludedPathSubstring;
+    this.pathExclusionFilter = pathExclusionFilter;
+    this.pathInclusionFilter = pathInclusionFilter;
   }
 
   /*
@@ -120,36 +124,51 @@ public class JobFileModifiedRangePathFilter extends JobFilePathFilter {
     if (!super.accept(path)) {
       return false;
     }
-
-    if (excludePathSubstrings(path)) {
-      JobFile jobFile = new JobFile(path.getName());
-      if (jobFile.isJobConfFile() || jobFile.isJobHistoryFile()) {
-        try {
-          FileSystem fs = path.getFileSystem(myConf);
-          FileStatus fileStatus = fs.getFileStatus(path);
-          long fileModificationTimeMillis = fileStatus.getModificationTime();
-          return accept(fileModificationTimeMillis);
-        } catch (IOException e) {
-          throw new ImportException("Cannot determine file modification time of "
-              + path.getName(), e);
-        }
-      } else {
-        // Reject anything that does not match a job conf filename.
-        LOG.info(" Not a valid job conf / job history file "+ path.getName());
-        return false;
-      }  
-    }
     
-    return false;
+    JobFile jobFile = new JobFile(path.getName());
+    if (jobFile.isJobConfFile() || jobFile.isJobHistoryFile()) {
+      if (jobFile.isJobHistoryFile()) {
+        if (!includesPathSubstrings(path) || !excludesPathSubstrings(path)) {
+          return false;
+        }
+      }
+      try {
+        FileSystem fs = path.getFileSystem(myConf);
+        FileStatus fileStatus = fs.getFileStatus(path);
+        long fileModificationTimeMillis = fileStatus.getModificationTime();
+        return accept(fileModificationTimeMillis);
+      } catch (IOException e) {
+        throw new ImportException("Cannot determine file modification time of " + path.getName(), e);
+      }
+    } else {
+      // Reject anything that does not match a job conf filename.
+      LOG.info(" Not a valid job conf / job history file " + path.getName());
+      return false;
+    }
   }
 
-  private boolean excludePathSubstrings(Path path) {
-    for (String s: excludedPathSubstring) {
+  private boolean excludesPathSubstrings(Path path) {
+    if (pathExclusionFilter == null)
+      return true;
+    
+    for (String s: pathExclusionFilter) {
       if (path.toString().indexOf(s) != -1)
         return false;
     }
     
     return true;
+  }
+  
+  private boolean includesPathSubstrings(Path path) {
+    if (pathInclusionFilter == null)
+      return true;
+    boolean matches = false;
+    for (String s: pathInclusionFilter) {
+      if (path.toString().indexOf(s) != -1)
+        matches = true;
+    }
+    
+    return matches;
   }
 
   /**
