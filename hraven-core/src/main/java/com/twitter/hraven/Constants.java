@@ -78,6 +78,15 @@ public class Constants {
 
   public static final String FLOW_EVENT_TABLE = PREFIX + "flow_event";
   public static final byte[] FLOW_EVENT_TABLE_BYTES = Bytes.toBytes(FLOW_EVENT_TABLE);
+  
+  public static final String GRAPHITE_KEY_MAPPING_TABLE = PREFIX + "graphite_key_mapping";
+  public static final byte[] GRAPHITE_KEY_MAPPING_TABLE_BYTES = Bytes.toBytes(GRAPHITE_KEY_MAPPING_TABLE);
+  
+  public static final String GRAPHITE_REVERSE_KEY_MAPPING_TABLE = PREFIX + "graphite_key_mapping_r";
+  public static final byte[] GRAPHITE_REVERSE_KEY_MAPPING_TABLE_BYTES = Bytes.toBytes(GRAPHITE_REVERSE_KEY_MAPPING_TABLE);
+  
+  public static final String GRAPHITE_KEY_MAPPING_COLUMN = "k";
+  public static final byte[] GRAPHITE_KEY_MAPPING_COLUMN_BYTES = Bytes.toBytes(GRAPHITE_KEY_MAPPING_COLUMN);
 
   public static final String INFO_FAM = "i";
   public static final byte[] INFO_FAM_BYTES = Bytes.toBytes(INFO_FAM);
@@ -435,6 +444,8 @@ public class Constants {
   public static final String JOBCONF_PROCESS_TASKHISTORY = "hraven.conf.processtasks";
   public static final String JOBCONF_GRAPHITE_USER_FILTER = "hraven.sink.graphite.userfilter";
   public static final String JOBCONF_GRAPHITE_QUEUE_FILTER = "hraven.sink.graphite.queuefilter";
+  public static final String JOBCONF_GRAPHITE_EXCLUDED_COMPONENTS = "hraven.sink.graphite.excludedcomponents";
+  public static final String JOBCONF_GRAPHITE_DONOTEXCLUDE_APPS = "hraven.sink.graphite.donotexcludeapps";
   
   public static final int GRAPHITE_DEFAULT_PORT = 2003;
   

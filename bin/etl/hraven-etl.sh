@@ -46,6 +46,7 @@ taskHistoryProcessing=false
 sinks=GRAPHITE,HBASE
 pathExclusionFilter=distcp
 pathInclusionFilter=rmcuser
+jobFileProcessorConfOpts=-Dhraven.sink.graphite.userfilter=rmcuser -Dhraven.sink.graphite.queuefilter=userplatform -Dhraven.sink.graphite.excludedcomponents=MultiInputCounters
 #######################################################
 
 home=$(dirname $0)
@@ -79,4 +80,4 @@ $home/jobFilePreprocessor.sh $hadoopconfdir $historyBasePath $historyDirPattern 
 $home/jobFileLoader.sh $hadoopconfdir $mapredmaxsplitsize $schedulerpoolname $cluster $historyProcessingDir
 
 # Process
-$home/jobFileProcessor.sh $hbaseconfdir $schedulerpoolname $historyProcessingDir $cluster $threads $batchsize default $sinks $historyProcessingDir $taskHistoryProcessing
+$home/jobFileProcessor.sh $hbaseconfdir $schedulerpoolname $historyProcessingDir $cluster $threads $batchsize default $sinks $historyProcessingDir $taskHistoryProcessing $jobFileProcessorConfOpts

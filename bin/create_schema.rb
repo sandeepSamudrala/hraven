@@ -46,5 +46,8 @@ create 'hraven.flow_queue', {NAME => 'i', VERSIONS => 3, COMPRESSION => 'LZO', B
 # flow_event - stores events fired during pig job execution
 create 'hraven.flow_event', {NAME => 'i', VERSIONS => 3, COMPRESSION => 'LZO', BLOOMFILTER => 'ROW'}
 
+# graphite key mapping tables
+create 'hraven.graphite_key_mapping', {NAME => 'i'}
+create 'hraven.graphite_key_mapping_r', {NAME => 'i'}
 
 exit

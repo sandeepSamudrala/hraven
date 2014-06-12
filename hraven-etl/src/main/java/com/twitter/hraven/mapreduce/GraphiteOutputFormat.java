@@ -16,6 +16,8 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
@@ -70,14 +72,38 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
 
   protected static class GraphiteRecordWriter extends RecordWriter<EnumWritable<HravenService>, HravenRecord> {
 
+    // prepend this prefix to all metrics
     private String METRIC_PREFIX;
+    
+    // filter jobs not submitted by this user
     private String userFilter;
+    
+    // filter jobs not submitted in this queue
     private String queueFilter;
+    
+    // exclude these metric path components (e.g MultiInputCounters - create a lot of redundant tree
+    // paths, and you wouldn't want to send them to graphite)
+    private String excludedComponents;
+    
+    // comma seperated list of app substrings to prevent from being excluded after above filters
+    private String doNotExcludeApps;
+    
+    private HTable keyMappingTable;
+    private HTable reverseKeyMappingTable;
+    
 
-    public GraphiteRecordWriter(String host, int port, String prefix, String userFilter, String queueFilter) throws IOException {
+    public GraphiteRecordWriter(Configuration hbaseconfig, String host, int port, String prefix, String userFilter, String queueFilter, String excludedComponents, String doNotExcludeApps) throws IOException {
       this.METRIC_PREFIX = prefix;
       this.userFilter = userFilter;
       this.queueFilter = queueFilter;
+      this.excludedComponents = excludedComponents;
+      this.doNotExcludeApps = doNotExcludeApps;
+      
+      keyMappingTable = new HTable(hbaseconfig, Constants.GRAPHITE_KEY_MAPPING_TABLE_BYTES);
+      keyMappingTable.setAutoFlush(false);
+
+      reverseKeyMappingTable = new HTable(hbaseconfig, Constants.GRAPHITE_REVERSE_KEY_MAPPING_TABLE_BYTES);
+      reverseKeyMappingTable.setAutoFlush(false);
 
       try {
         // Open an connection to Graphite server.
@@ -110,7 +136,7 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
 
       try {
         GraphiteHistoryWriter graphiteWriter =
-            new GraphiteHistoryWriter(METRIC_PREFIX, service, recordCollection, output, userFilter, queueFilter);
+            new GraphiteHistoryWriter(keyMappingTable, reverseKeyMappingTable, METRIC_PREFIX, service, recordCollection, output, userFilter, queueFilter, excludedComponents, doNotExcludeApps);
         lines = graphiteWriter.write();
       } catch (Exception e) {
         LOG.error("Error generating metrics for graphite", e);
@@ -119,7 +145,7 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
       if (output.length() > 0) {
         
         try {
-          LOG.info("SendToGraphite:" + recordCollection.getKey().toString() + lines + " lines");
+          LOG.info("SendToGraphite: " + recordCollection.getKey().toString() + " : " + lines + " metrics");
           writer.write(output.toString());
         } catch (Exception e) {
           LOG.error("Error sending metrics to graphite", e);
@@ -136,8 +162,9 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
       } catch (Exception e) {
         throw new IOException("Error flush metrics to graphite", e);
       }
+      keyMappingTable.close();
+      reverseKeyMappingTable.close();
     }
-
   }
 
   @Override
@@ -157,10 +184,15 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
   public RecordWriter<EnumWritable<HravenService>, HravenRecord> getRecordWriter(TaskAttemptContext context)
       throws IOException, InterruptedException {
     Configuration conf = context.getConfiguration();
-    return new GraphiteRecordWriter(conf.get(Constants.JOBCONF_GRAPHITE_HOST_KEY,
-      Constants.GRAPHITE_DEFAULT_HOST), conf.getInt(Constants.JOBCONF_GRAPHITE_PORT_KEY,
-      Constants.GRAPHITE_DEFAULT_PORT), conf.get(Constants.JOBCONF_GRAPHITE_PREFIX,
-      Constants.GRAPHITE_DEFAULT_PREFIX), conf.get(Constants.JOBCONF_GRAPHITE_USER_FILTER), conf.get(Constants.JOBCONF_GRAPHITE_QUEUE_FILTER));
+    return new GraphiteRecordWriter(HBaseConfiguration.create(conf),
+                                    conf.get(Constants.JOBCONF_GRAPHITE_HOST_KEY, Constants.GRAPHITE_DEFAULT_HOST),
+                                    conf.getInt(Constants.JOBCONF_GRAPHITE_PORT_KEY, Constants.GRAPHITE_DEFAULT_PORT),
+                                    conf.get(Constants.JOBCONF_GRAPHITE_PREFIX, Constants.GRAPHITE_DEFAULT_PREFIX),
+                                    conf.get(Constants.JOBCONF_GRAPHITE_USER_FILTER),
+                                    conf.get(Constants.JOBCONF_GRAPHITE_QUEUE_FILTER),
+                                    conf.get(Constants.JOBCONF_GRAPHITE_EXCLUDED_COMPONENTS),
+                                    conf.get(Constants.JOBCONF_GRAPHITE_DONOTEXCLUDE_APPS)
+                                    );
   }
 
 }
