@@ -73,6 +73,10 @@ public class FlowKey extends AppKey implements WritableComparable<Object> {
     return runId;
   }
 
+  public String toString() {
+    return super.toString() + Constants.SEP + this.getRunId();
+  }
+
   /**
    * Compares two FlowKey objects on the basis of
    * their cluster, userName, appId and encodedRunId

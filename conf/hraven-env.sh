@@ -27,9 +27,12 @@
 #                    All other hadoop configurations can be set in the standard hadoop manner, or supplied here instead.
 # export HADOOP_CONF_DIR=
 
-export HRAVEN_CLASSPATH=`hbase classpath`
+# HBASE_CLASSPATH Used in hraven-etl-env.sh
+export HBASE_CLASSPATH=`hbase classpath`
+
+# export HRAVEN_CLASSPATH=$HBASE_CLASSPATH
 # export HRAVEN_CLASSPATH=`hbase --config /etc/hbase/conf-hbase-tst-dc1 classpath`
-#export HRAVEN_CLASSPATH=
+export HRAVEN_CLASSPATH=
 
 # The maximum amount of heap to use, in MB. Default is 1000.
 # export HRAVEN_HEAPSIZE=1000

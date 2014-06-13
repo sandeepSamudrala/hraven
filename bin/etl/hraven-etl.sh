@@ -28,11 +28,15 @@
 
 # Parameters
 ########## FILL IN APPROPRIATE VALUES BELOW ##########
-cluster="mycluster"
+cluster="mycluster" #Name of your cluster (arbitrary)
 mapredmaxsplitsize="204800"
-batchsize="100"
-schedulerpoolname="mypool"
+batchsize="100" #default is 1, which is bad for mapred job
+schedulerpoolname="mypool" #name of scheduler pool (arbitrary)
 threads="20"
+defaultrawfilesizelimit="524288000"
+machinetype="mymachine" #name of machine (arbitrary)
+
+#conf directories
 hadoopconfdir=${HADOOP_CONF_DIR:-$HADOOP_HOME/conf}
 hbaseconfdir=${HBASE_CONF_DIR:-$HBASE_HOME/conf}
 # HDFS directories for processing and loading job history data
@@ -49,22 +53,13 @@ pathInclusionFilter=rmcuser
 jobFileProcessorConfOpts=-Dhraven.sink.graphite.userfilter=rmcuser -Dhraven.sink.graphite.queuefilter=userplatform -Dhraven.sink.graphite.excludedcomponents=MultiInputCounters
 #######################################################
 
-home=$(dirname $0)
 
-# set the hraven-core jar as part of libjars and hadoop classpath
-# set this here because it only pertains to the etl logic
-export LIBJARS=`find $home/../../lib/ -name 'hraven-core*.jar'`
-export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$LIBJARS
-hravenEtlJar=`find $home/../../lib/ -name 'hraven-etl*.jar'`
+source $(dirname $0)/hraven-etl-env.sh
 
-source $home/../../conf/hraven-env.sh
-source $home/pidfiles.sh
-
-# Each job has 2 files: history and config
 batchsizejobs=$(($batchsize / 2))
-
 myscriptname=$(basename "$0" .sh)
 stopfile=$HRAVEN_PID_DIR/$myscriptname.stop
+
 if [ -f $stopfile ]; then
   echo "Error: not allowed to run. Remove $stopfile continue." 1>&2
   exit 1
@@ -74,10 +69,10 @@ create_pidfile $HRAVEN_PID_DIR
 trap 'cleanup_pidfile_and_exit $HRAVEN_PID_DIR' INT TERM EXIT
 
 # Pre-process
-$home/jobFilePreprocessor.sh $hadoopconfdir $historyBasePath $historyDirPattern $historyProcessingDir $cluster $batchsize $pathExclusionFilter $pathInclusionFilter
+$home/jobFilePreprocessor.sh $hadoopconfdir $historyBasePath $historyDirPattern $historyProcessingDir $cluster $batchsize $defaultrawfilesizelimit $pathExclusionFilter $pathInclusionFilter
 
 # Load
 $home/jobFileLoader.sh $hadoopconfdir $mapredmaxsplitsize $schedulerpoolname $cluster $historyProcessingDir
 
 # Process
-$home/jobFileProcessor.sh $hbaseconfdir $schedulerpoolname $historyProcessingDir $cluster $threads $batchsize default $sinks $historyProcessingDir $taskHistoryProcessing $jobFileProcessorConfOpts
+$home/jobFileProcessor.sh $hbaseconfdir $schedulerpoolname $historyProcessingDir $cluster $threads $batchsize machinetype $sinks $historyProcessingDir $taskHistoryProcessing $jobFileProcessorConfOpts

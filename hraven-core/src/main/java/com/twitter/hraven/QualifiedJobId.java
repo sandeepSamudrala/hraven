@@ -21,6 +21,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonProperty;
 
 /**
  * The job ID should be relatively unique, unless two clusters start at the same
@@ -42,7 +44,9 @@ public class QualifiedJobId extends JobId implements Writable {
    * @param cluster
    * @param jobId
    */
-  public QualifiedJobId(String cluster, String jobId) {
+  @JsonCreator
+  public QualifiedJobId(@JsonProperty("cluster") String cluster,
+                        @JsonProperty("jobId") String jobId) {
     super(jobId);
     this.cluster = (cluster != null ? cluster.trim() : "");
   }

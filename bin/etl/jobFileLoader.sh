@@ -25,13 +25,10 @@ then
   exit 1
 fi
 
-home=$(dirname $0)
-source $home/../../conf/hraven-env.sh
-source $home/pidfiles.sh
+source $(dirname $0)/hraven-etl-env.sh
+
 myscriptname=$(basename "$0" .sh)
 stopfile=$HRAVEN_PID_DIR/$myscriptname.stop
-export LIBJARS=`find $home/../../lib/ -name 'hraven-core*.jar'`
-hravenEtlJar=`find $home/../../lib/ -name 'hraven-etl*.jar'`
 
 if [ -f $stopfile ]; then
   echo "Error: not allowed to run. Remove $stopfile continue." 1>&2

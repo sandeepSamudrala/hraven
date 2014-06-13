@@ -38,7 +38,7 @@ public class JobKey extends FlowKey implements WritableComparable<Object>{
 
   /**
    * Constructor.
-   * 
+   *
    * @param cluster
    *          the Hadoop cluster on which the job ran.
    * @param userName
@@ -82,7 +82,7 @@ public class JobKey extends FlowKey implements WritableComparable<Object>{
 
   /**
    * Constructor.
-   * 
+   *
    * @param jobDesc
    *          from which to construct this JobKey.
    */
@@ -107,15 +107,12 @@ public class JobKey extends FlowKey implements WritableComparable<Object>{
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see java.lang.Object#toString()
    */
   public String toString() {
-    return getCluster() + Constants.SEP + this.userName + Constants.SEP
-        + this.appId + Constants.SEP + this.getRunId()
-        + Constants.SEP + this.jobId.getJobIdString();
+    return super.toString() + Constants.SEP + this.jobId.getJobIdString();
   }
-
   /**
    * Compares two JobKey QualifiedJobId
    *

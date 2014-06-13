@@ -19,21 +19,17 @@
 # Usage ./jobFilePreprocessor.sh [hadoopconfdir]
 #   [historyrawdir] [historyprocessingdir] [cluster] [batchsize]
 
-if [ $# -lt 6 ]
+if [ $# -lt 7 ]
 then
-  echo "Usage: `basename $0` [hadoopconfdir] [historyBasePath] [historyrawdir] [historyprocessingdir] [cluster] [batchsize] [[pathExclusionFilter]] [[pathInclusionFilter]]"
+  echo "Usage: `basename $0` [hadoopconfdir] [historyBasePath] [historyrawdir] [historyprocessingdir] [cluster] [batchsize] [defaultrawfilesizelimit] [[pathExclusionFilter]] [[pathInclusionFilter]]"
   exit 1
 fi
 
-home=$(dirname $0)
-source $home/../../conf/hraven-env.sh
-source $home/pidfiles.sh
+source $(dirname $0)/hraven-etl-env.sh
+
+export HADOOP_HEAPSIZE=4000
 myscriptname=$(basename "$0" .sh)
 stopfile=$HRAVEN_PID_DIR/$myscriptname.stop
-export LIBJARS=`find $home/../../lib/ -name 'hraven-core*.jar'`
-hravenEtlJar=`find $home/../../lib/ -name 'hraven-etl*.jar'`
-export HADOOP_HEAPSIZE=4000
-export HADOOP_CLASSPATH=$(ls $home/../../lib/commons-lang-*.jar):`find $home/../../lib/ -name 'hraven-core*.jar'`:`hbase classpath`
 
 if [ -f $stopfile ]; then
   echo "Error: not allowed to run. Remove $stopfile continue." 1>&2
@@ -43,4 +39,4 @@ fi
 create_pidfile $HRAVEN_PID_DIR
 trap 'cleanup_pidfile_and_exit $HRAVEN_PID_DIR' INT TERM EXIT
 
-hadoop --config $1 jar $hravenEtlJar com.twitter.hraven.etl.JobFilePreprocessor -libjars=$LIBJARS -d -bi $2 -i $3 -o $4 -c $5 -b $6 -s 524288000 -ex $7 -ix $8
+hadoop --config $1 jar $hravenEtlJar com.twitter.hraven.etl.JobFilePreprocessor -libjars=$LIBJARS -d -bi $2 -i $3 -o $4 -c $5 -b $6 -s $7 -ex $8 -ix $9

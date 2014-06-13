@@ -27,14 +27,10 @@ then
   exit 1
 fi
 
-home=$(dirname $0)
-source $home/../../conf/hraven-env.sh
-source $home/pidfiles.sh
+source $(dirname $0)/hraven-etl-env.sh
+
 myscriptname=$(basename "$0" .sh)
-export LIBJARS=`find $home/../../lib/ -name 'hraven-core*.jar'`,$(ls $home/../../lib/guava-*.jar)
-hravenEtlJar=`find $home/../../lib/ -name 'hraven-etl*.jar'`
 stopfile=$HRAVEN_PID_DIR/$myscriptname.stop
-export HADOOP_CLASSPATH=$(ls $home/../../lib/commons-lang-*.jar):`find $home/../../lib/ -name 'hraven-core*.jar'`:`hbase classpath`:$(ls $home/../../lib/guava-*.jar)
 
 if [ -f $stopfile ]; then
   echo "Error: not allowed to run. Remove $stopfile continue." 1>&2
