@@ -9,6 +9,7 @@ import com.twitter.hraven.HravenRecord;
 import com.twitter.hraven.JobHistoryKeys;
 import com.twitter.hraven.JobHistoryRecord;
 import com.twitter.hraven.RecordCategory;
+import com.twitter.hraven.datasource.ProcessingException;
 
 public class HbaseHistoryWriter {
   private static Log LOG = LogFactory.getLog(HbaseHistoryWriter.class);
@@ -54,15 +55,26 @@ public class HbaseHistoryWriter {
       String counterName = record.getDataKey().get(2);
       byte[] counterPrefix = null;
 
-      if (dataKey == JobHistoryKeys.COUNTERS) {
-        counterPrefix = Bytes.add(Constants.COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
-      } else if (dataKey == JobHistoryKeys.MAP_COUNTERS) {
-        counterPrefix = Bytes.add(Constants.MAP_COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
-      } else if (dataKey == JobHistoryKeys.REDUCE_COUNTERS) {
-        counterPrefix =
-            Bytes.add(Constants.REDUCE_COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
-      } else {
-        throw new IllegalArgumentException("Unknown counter type " + dataKey.toString());
+      try {
+        switch (dataKey) {
+        case COUNTERS:
+        case TOTAL_COUNTERS:
+        case TASK_COUNTERS:
+        case TASK_ATTEMPT_COUNTERS:
+          counterPrefix = Bytes.add(Constants.COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
+          break;
+        case MAP_COUNTERS:
+          counterPrefix = Bytes.add(Constants.MAP_COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
+        case REDUCE_COUNTERS:
+          counterPrefix =
+              Bytes.add(Constants.REDUCE_COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
+        default:
+          throw new IllegalArgumentException("Unknown counter type " + dataKey.toString());
+        }
+      } catch (IllegalArgumentException iae) {
+        throw new ProcessingException("Unknown counter type " + dataKey, iae);
+      } catch (NullPointerException npe) {
+        throw new ProcessingException("Null counter type " + dataKey, npe);
       }
 
       byte[] groupPrefix = Bytes.add(counterPrefix, Bytes.toBytes(group), Constants.SEP_BYTES);

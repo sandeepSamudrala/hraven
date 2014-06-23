@@ -120,13 +120,12 @@ public class FileLister {
         + " inputPath= " + inputPath.toUri());
     //Instead of getting a base path and recursing, we insist on getting a path pattern
     //and using globStatus to return all files instead, which is much faster than the recursive method call:
-    //FileStatus[] origList = listFiles(recurse, hdfs, inputPath, pathFilter);
     FileStatus[] origList = hdfs.globStatus(inputPath, pathFilter);
     if (origList == null) {
       LOG.info(" No files found, orig list returning 0");
       return new FileStatus[0];
     }
-    return pruneFileListBySize(maxFileSize, origList);
+    return pruneFileList(maxFileSize, origList);
    }
 
   /**
@@ -140,7 +139,7 @@ public class FileLister {
    * @param inputPath - root dir of the path containing history files
    * @return - pruned array of FileStatus of files to be processed
    */
-  static FileStatus[] pruneFileListBySize(long maxFileSize, FileStatus[] origList) {
+  static FileStatus[] pruneFileList(long maxFileSize, FileStatus[] origList) {
     LOG.info("Pruning orig list of size " + origList.length);
 
     long fileSize = 0L;

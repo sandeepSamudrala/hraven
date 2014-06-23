@@ -94,7 +94,7 @@ public class JobHistoryFileParserFactory {
       return new JobHistoryFileParserHadoop1(jobConf);
 
     case TWO:
-      throw new UnsupportedOperationException("Hadoop 2 support is broken for now");
+      return new JobHistoryFileParserHadoop2(jobConf);
 
     default:
       throw new IllegalArgumentException(

@@ -15,7 +15,7 @@ import org.apache.hadoop.util.StringUtils;
 public class RecordDataKey implements Writable {
   private List<String> components;
 
-  public RecordDataKey(String[] components) {
+  public RecordDataKey(String... components) {
     this.components = Arrays.asList(components);
   }
 

@@ -43,8 +43,8 @@ import com.twitter.hraven.HdfsConstants;
 import com.twitter.hraven.HdfsStats;
 import com.twitter.hraven.HdfsStatsKey;
 import com.twitter.hraven.QualifiedPathKey;
+import com.twitter.hraven.util.FuzzyRowFilter;
 import com.twitter.hraven.util.StringUtil;
-
 
 /**
  * Service that accesses the hdfs stats tables and populates the HdfsStats object
@@ -293,12 +293,12 @@ public class HdfsStatsService {
       fuzzyInfo[i] = 0;
     }
 
-//    @SuppressWarnings("unchecked")
-//    FuzzyRowFilter rowFilter =
-//        new FuzzyRowFilter(Arrays.asList(
-//          new Pair<byte[], byte[]>(Bytes.toBytesBinary(rowKey), fuzzyInfo)));
+    @SuppressWarnings("unchecked")
+    FuzzyRowFilter rowFilter =
+        new FuzzyRowFilter(Arrays.asList(new Pair<byte[], byte[]>(Bytes.toBytesBinary(rowKey),
+            fuzzyInfo)));
 
-//    scan.setFilter(rowFilter);
+   scan.setFilter(rowFilter);
     String minStartKey = Long.toString(getEncodedRunId(starttime));
     String maxEndKey = Long.toString(getEncodedRunId(endtime));
     LOG.info(starttime + " " + getEncodedRunId(starttime) + " min " + minStartKey + " " + endtime
