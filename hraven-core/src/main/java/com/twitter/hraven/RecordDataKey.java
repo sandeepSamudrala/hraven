@@ -38,10 +38,7 @@ public class RecordDataKey implements Writable {
 
   @Override
   public int hashCode() {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ((components == null) ? 0 : components.hashCode());
-    return result;
+    return 1 + ((components == null) ? 0 : components.hashCode());
   }
 
   @Override
