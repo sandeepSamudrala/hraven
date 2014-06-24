@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -56,6 +57,7 @@ import com.twitter.hraven.Constants;
 import com.twitter.hraven.Flow;
 import com.twitter.hraven.HdfsConstants;
 import com.twitter.hraven.HdfsStats;
+import com.twitter.hraven.HravenResponseMetrics;
 import com.twitter.hraven.JobDetails;
 import com.twitter.hraven.JobKey;
 import com.twitter.hraven.TaskDetails;
@@ -164,7 +166,12 @@ public class RestJSONResource {
       LOG.info("For job/{cluster}/{jobId} with input query:" + " job/" + cluster + SLASH + jobId
           + " No jobDetails found, but spent " + timer);
     }
-   return jobDetails;
+    // export latency metrics
+    HravenResponseMetrics.JOB_API_LATENCY_VALUE
+      .set(timer.elapsed(TimeUnit.MILLISECONDS));
+
+    return jobDetails;
+
   }
 
   @GET
@@ -208,6 +215,10 @@ public class RestJSONResource {
       LOG.info("For jobFlow/{cluster}/{jobId} with input query: " + "jobFlow/" + cluster + SLASH
           + jobId + " No flow found, spent " + timer);
     }
+
+    // export latency metrics
+    HravenResponseMetrics.JOBFLOW_API_LATENCY_VALUE
+        .set(timer.elapsed(TimeUnit.MILLISECONDS));
     return flow;
   }
 
@@ -263,13 +274,17 @@ public class RestJSONResource {
           + " startTime=" + startTime + " endTime=" + endTime
           + " &includeConf=" + builderIncludeConfigs + " &includeConfRegex="
           + builderIncludeConfigRegex + " fetched " + flows.size() + " flows " + " in " + timer);
-    } else {
+     } else {
       LOG.info("For flow/{cluster}/{user}/{appId}/{version} with input query: " + "flow/" + cluster
           + SLASH + user + SLASH + appId + SLASH + version + "?limit=" + limit
           + " startTime=" + startTime + " endTime=" + endTime
           + " &includeConf=" + builderIncludeConfigs + "&includeConfRegex="
           + builderIncludeConfigRegex + " No flows fetched, spent " + timer);
     }
+
+    // export latency metrics
+    HravenResponseMetrics.FLOW_VERSION_API_LATENCY_VALUE
+        .set(timer.elapsed(TimeUnit.MILLISECONDS));
     return flows;
   }
 
@@ -292,9 +307,10 @@ public class RestJSONResource {
       configFilter = new SerializationContext.ConfigurationFilter(includeConfig);
     } else if (includeConfigRegex != null && !includeConfigRegex.isEmpty()) {
       configFilter = new SerializationContext.RegexConfigurationFilter(includeConfigRegex);
-    }
-    serializationContext.set(new SerializationContext(
+    } else {
+      serializationContext.set(new SerializationContext(
         SerializationContext.DetailLevel.EVERYTHING, configFilter));
+    }
     List<Flow> flows = getFlowList(cluster, user, appId, null, startTime, endTime, limit);
     timer.stop();
 
@@ -309,15 +325,19 @@ public class RestJSONResource {
 
     if (flows != null) {
       LOG.info("For flow/{cluster}/{user}/{appId} with input query: " + "flow/" + cluster + SLASH
-          + user + SLASH + appId + "?limit=" + limit + "&includeConf=" + builderIncludeConfigs
+          + user + SLASH + appId + "?limit=" + limit + "&startTime=" + startTime 
+          + "&endTime=" + endTime + "&includeConf=" + builderIncludeConfigs
           + "&includeConfRegex=" + builderIncludeConfigRegex + " fetched " + flows.size()
           + " flows in " + timer);
     } else {
       LOG.info("For flow/{cluster}/{user}/{appId} with input query: " + "flow/" + cluster + SLASH
           + user + SLASH + appId + "?limit=" + limit + "&includeConf=" + builderIncludeConfigs
-          + "&includeConfRegex=" + builderIncludeConfigRegex + " No flows fetched, spent " + timer);
+          + "&includeConfRegex=" + builderIncludeConfigRegex + " No flows fetched, spent "+ timer);
     }
 
+    // export latency metrics
+    HravenResponseMetrics.FLOW_API_LATENCY_VALUE
+        .set(timer.elapsed(TimeUnit.MILLISECONDS));
     return flows;
 
   }
@@ -407,6 +427,10 @@ public class RestJSONResource {
         + appId + "?version=" + version + "&limit=" + limit + "&startRow=" + startRow
         + "&startTime=" + startTime + "&endTime=" + endTime + "&includeJobs=" + includeJobs
         + " fetched " + flows.size() + " in " + timer);
+
+    // export latency metrics
+    HravenResponseMetrics.FLOW_STATS_API_LATENCY_VALUE
+        .set(timer.elapsed(TimeUnit.MILLISECONDS));
     return flowStatsPage;
  }
 
@@ -434,8 +458,11 @@ public class RestJSONResource {
      LOG.info("For appVersion/{cluster}/{user}/{appId}/ with input query "
        + "appVersion/" + cluster + SLASH + user + SLASH + appId
        + "?limit=" + limit
-       + " fetched #number of VersionInfo " + distinctVersions.size() + " in " + timer);
+       + " fetched #number of VersionInfo " + distinctVersions.size() + " in " );//+ timer);
 
+     // export latency metrics
+     HravenResponseMetrics.APPVERSIONS_API_LATENCY_VALUE
+       .set(timer.elapsed(TimeUnit.MILLISECONDS));
      return distinctVersions;
   }
 
@@ -527,6 +554,10 @@ public class RestJSONResource {
         }
       }
   }
+
+    // export latency metrics
+    HravenResponseMetrics.HDFS_STATS_API_LATENCY_VALUE
+      .set(timer.elapsed(TimeUnit.MILLISECONDS));
     return hdfsStats;
   }
 
@@ -585,6 +616,9 @@ public class RestJSONResource {
           + " fetched 0 HdfsStats in " + timer);
     }
 
+    // export latency metrics
+    HravenResponseMetrics.HDFS_TIMESERIES_API_LATENCY_VALUE
+       .set(timer.elapsed(TimeUnit.MILLISECONDS));
     return hdfsStats;
   }
 
@@ -635,6 +669,9 @@ public class RestJSONResource {
    serializationContext.set(new SerializationContext(
       SerializationContext.DetailLevel.APP_SUMMARY_STATS_NEW_JOBS_ONLY));
 
+   // export latency metrics
+   HravenResponseMetrics.NEW_JOBS_API_LATENCY_VALUE
+       .set(timer.elapsed(TimeUnit.MILLISECONDS));
     return newApps;
  }
   
