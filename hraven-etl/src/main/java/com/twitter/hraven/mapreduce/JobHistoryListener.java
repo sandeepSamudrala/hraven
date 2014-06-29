@@ -65,6 +65,7 @@ public class JobHistoryListener implements Listener {
    */
   private long mapSlotMillis = 0L;
   private long reduceSlotMillis = 0L;
+  private boolean processTasks = true;
   private Collection jobRecords;
   private Collection taskRecords;
 
@@ -73,8 +74,9 @@ public class JobHistoryListener implements Listener {
    * reading a list of HBase puts is assembled.
    * 
    * @param jobKey jobKey of the job to be persisted
+   * @param processTasks 
    */
-  public JobHistoryListener(JobKey jobKey) {
+  public JobHistoryListener(JobKey jobKey, boolean processTasks) {
     if (null == jobKey) {
       String msg = "JobKey cannot be null";
       LOG.error(msg);
@@ -83,6 +85,7 @@ public class JobHistoryListener implements Listener {
     this.jobKey = jobKey;
     this.jobRecords = new JobHistoryRecordCollection(jobKey);
     this.taskRecords = new ArrayList<JobHistoryTaskRecord>();
+    this.processTasks = processTasks;
     setJobId(jobKey.getJobId().getJobIdString());
   }
 
@@ -94,13 +97,16 @@ public class JobHistoryListener implements Listener {
       handleJob(values);
       break;
     case Task:
-      handleTask(values);
+      if (processTasks)
+        handleTask(values);
       break;
     case MapAttempt:
-      handleMapAttempt(values);
+      if (processTasks)
+        handleMapAttempt(values);
       break;
     case ReduceAttempt:
-      handleReduceAttempt(values);
+      if (processTasks)
+        handleReduceAttempt(values);
       break;
     default:
       // skip other types

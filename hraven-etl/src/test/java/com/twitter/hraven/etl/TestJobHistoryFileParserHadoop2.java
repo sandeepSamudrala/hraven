@@ -68,7 +68,7 @@ public class TestJobHistoryFileParserHadoop2 {
     assertTrue(historyFileParser instanceof JobHistoryFileParserHadoop2);
 
     JobKey jobKey = new JobKey("cluster1", "user", "Sleep", 1, "job_1329348432655_0001");
-    historyFileParser.parse(contents, jobKey);
+    historyFileParser.parse(contents, jobKey, true);
 
     JobHistoryRecordCollection jobRecords = (JobHistoryRecordCollection)historyFileParser.getJobRecords();
     assertEquals(156, jobRecords.size());
@@ -151,7 +151,7 @@ public class TestJobHistoryFileParserHadoop2 {
 
     JobKey jobKey = new JobKey("cluster1", "user", "Sleep", 1, "job_1329348432655_0001");
     // pass in null as jobConf and confirm the exception thrown
-    historyFileParser.parse(contents, jobKey);
+    historyFileParser.parse(contents, jobKey, true);
   }
 
   @Test
@@ -173,7 +173,7 @@ public class TestJobHistoryFileParserHadoop2 {
     // confirm that we get back an object that can parse hadoop 2.0 files
     assertTrue(historyFileParser instanceof JobHistoryFileParserHadoop2);
     JobKey jobKey = new JobKey("cluster1", "user", "Sleep", 1, "job_1329348432655_0001");
-    historyFileParser.parse(contents, jobKey);
+    historyFileParser.parse(contents, jobKey, true);
 
     // this history file has only map slot millis no reduce millis
     Long mbMillis = historyFileParser.getMegaByteMillis();

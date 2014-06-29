@@ -434,6 +434,7 @@ public class Constants {
   public static final String JOBCONF_GRAPHITE_HOST_KEY = "hraven.sink.graphite.host";
   public static final String JOBCONF_GRAPHITE_PORT_KEY = "hraven.sink.graphite.port";
   public static final String JOBCONF_GRAPHITE_PREFIX = "hraven.sink.graphite.prefix";
+  public static final String JOBCONF_PROCESS_TASKHISTORY = "hraven.conf.processtasks";
   public static final String JOBCONF_GRAPHITE_USER_FILTER = "hraven.sink.graphite.userfilter";
   public static final String JOBCONF_GRAPHITE_QUEUE_FILTER = "hraven.sink.graphite.queuefilter";
   public static final String JOBCONF_GRAPHITE_EXCLUDED_COMPONENTS = "hraven.sink.graphite.excludedcomponents";

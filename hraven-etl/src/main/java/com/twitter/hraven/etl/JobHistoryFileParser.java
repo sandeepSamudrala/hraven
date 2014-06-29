@@ -29,11 +29,12 @@ import com.twitter.hraven.datasource.ProcessingException;
 public interface JobHistoryFileParser {
 
 	/**
-	 * this method should parse the history file and populate the puts
+	 * this method should parse the history file and populate the records
+	 * @param processTasks 
 	 * 
 	 * @throws ProcessingException
 	 */
-	public void parse(byte[] historyFile, JobKey jobKey);
+	public void parse(byte[] historyFile, JobKey jobKey, boolean processTasks);
 
 	/**
 	 * Calculates the megabytmillis taken up by this job

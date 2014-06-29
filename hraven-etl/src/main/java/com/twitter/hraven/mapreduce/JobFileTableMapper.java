@@ -118,6 +118,8 @@ public class JobFileTableMapper extends
 
   private long keyCount = 0;
 
+  private boolean processTasks;
+
   /**
    * @return the key class for the job output data.
    */
@@ -154,6 +156,10 @@ public class JobFileTableMapper extends
         }));
 
     mos = new MultipleOutputs<HravenService, HravenRecord>(context);
+    
+    if (context.getConfiguration().get(Constants.JOBCONF_PROCESS_TASKHISTORY) != null) {
+      processTasks = Boolean.parseBoolean(context.getConfiguration().get(Constants.JOBCONF_PROCESS_TASKHISTORY));
+    }
   }
 
   @Override
@@ -272,7 +278,7 @@ public class JobFileTableMapper extends
       JobHistoryFileParser historyFileParser = JobHistoryFileParserFactory
     		  .createJobHistoryFileParser(historyFileContents, jobConf);
 
-      historyFileParser.parse(historyFileContents, jobKey);
+      historyFileParser.parse(historyFileContents, jobKey, processTasks);
       context.progress();
 
       //3.3: get and write job related data
@@ -314,14 +320,16 @@ public class JobFileTableMapper extends
       sink(HravenService.JOB_HISTORY, jobHistoryRecords);
       context.progress();
       
-      //3.6: get and write task related data
-      ArrayList<JobHistoryTaskRecord> taskHistoryRecords = (ArrayList<JobHistoryTaskRecord>) historyFileParser.getTaskRecords();
-      
-      LOG.info("Sending " + taskHistoryRecords.size() + " Task history records to "
-          + HravenService.JOB_HISTORY_TASK + " service");
+      if (processTasks) {
+        //3.6: get and write task related data
+        ArrayList<JobHistoryTaskRecord> taskHistoryRecords = (ArrayList<JobHistoryTaskRecord>) historyFileParser.getTaskRecords();
+        
+        LOG.info("Sending " + taskHistoryRecords.size() + " Task history records to "
+            + HravenService.JOB_HISTORY_TASK + " service");
 
-      for (JobHistoryTaskRecord taskRecord: taskHistoryRecords) {
-        sink(HravenService.JOB_HISTORY_TASK, taskRecord);  
+        for (JobHistoryTaskRecord taskRecord: taskHistoryRecords) {
+          sink(HravenService.JOB_HISTORY_TASK, taskRecord);  
+        }
       }
       
       context.progress();

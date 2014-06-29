@@ -51,7 +51,7 @@ public class TestJobHistoryListener {
 	public void checkHadoopVersionSet() {
 		JobKey jobKey = new JobKey("cluster1", "user", "Sleep", 1,
 				"job_1329348432655_0001");
-		JobHistoryListener jobHistoryListener = new JobHistoryListener(jobKey);
+		JobHistoryListener jobHistoryListener = new JobHistoryListener(jobKey, true);
 		assertEquals(jobHistoryListener.getJobRecords().size(), 0);
 		
 		JobHistoryFileParserHadoop1 jh = new JobHistoryFileParserHadoop1(null);

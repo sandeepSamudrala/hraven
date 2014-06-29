@@ -183,6 +183,12 @@ public class JobFileProcessor extends Configured implements Tool {
     o.setArgName("sinks");
     o.setRequired(true);
     options.addOption(o);
+    
+    // Toggle processing of task history
+    o = new Option("tt", "processtasks", true, "Toggle processing of task history data on/off");
+    o.setArgName("processtasks");
+    o.setRequired(false);
+    options.addOption(o);
 
     CommandLineParser parser = new PosixParser();
     CommandLine commandLine = null;
@@ -324,6 +330,11 @@ public class JobFileProcessor extends Configured implements Tool {
     // Shove this into the jobConf so that we can get it out on the task side.
     hbaseConf.setStrings(Constants.CLUSTER_JOB_CONF_KEY, cluster);
 
+    //Whether or not to process task history data
+    if (commandLine.hasOption("tt")) {
+      hbaseConf.setStrings(Constants.JOBCONF_PROCESS_TASKHISTORY, commandLine.getOptionValue("tt"));
+    }
+    
     boolean success = false;
     if (reprocess) {
       success = reProcessRecords(hbaseConf, cluster, batchSize, threadCount);

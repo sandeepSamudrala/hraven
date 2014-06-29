@@ -220,7 +220,7 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
    * {@inheritDoc}
    */
   @Override
-  public void parse(byte[] historyFileContents, JobKey jobKey)
+  public void parse(byte[] historyFileContents, JobKey jobKey, boolean processTasks)
       throws ProcessingException {
 
     this.jobKey = jobKey;
@@ -270,7 +270,7 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
           // confirm that we got an "event" object
           if (eDetails != null) {
             JSONObject eventDetails = new JSONObject(eDetails.toString());
-            processRecords(recType, eventDetails);
+            processRecords(recType, eventDetails, processTasks);
           } else {
             throw new ProcessingException("expected event details but not found "
                 + record.get(TYPE).toString() + " cannot process this record! " + jobKey);
@@ -498,7 +498,7 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
    * process individual records
    * @throws JSONException
    */
-  private void processRecords(Hadoop2RecordType recType, JSONObject eventDetails)
+  private void processRecords(Hadoop2RecordType recType, JSONObject eventDetails, boolean processTasks)
       throws JSONException {
 
     switch (recType) {
@@ -522,6 +522,7 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
       break;
 
     case AMStarted:
+      if (processTasks) {
         final TaskKey amAttemptIdKey =
             getAMKey(AM_ATTEMPT_PREFIX, eventDetails.getString(APPLICATION_ATTEMPTID));
         // generate a new record per AM Attempt
@@ -535,9 +536,11 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
                 : RecordCategory.HISTORY_TASK_META, amAttemptIdKey, key, value));
           }
         });  
+      }
       break;
 
     case MapAttemptFinished:
+      if (processTasks) {
         final TaskKey taskMAttemptIdKey =
             getTaskKey(TASK_ATTEMPT_PREFIX, this.jobNumber, eventDetails.getString(ATTEMPTID));
         
@@ -551,9 +554,11 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
                 : RecordCategory.HISTORY_TASK_META, taskMAttemptIdKey, key, value));
           }
         });  
+      }
       break;
 
     case ReduceAttemptFinished:
+      if (processTasks) {
         final TaskKey taskRAttemptIdKey =
             getTaskKey(TASK_ATTEMPT_PREFIX, this.jobNumber, eventDetails.getString(ATTEMPTID));
         taskRecords.add(new JobHistoryTaskRecord(RecordCategory.HISTORY_TASK_META, taskRAttemptIdKey,
@@ -565,12 +570,14 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
             taskRecords.add(new JobHistoryTaskRecord(isNumeric ? RecordCategory.HISTORY_TASK_COUNTER
                 : RecordCategory.HISTORY_TASK_META, taskRAttemptIdKey, key, value));
           }
-        });
+        });        
+      }
       break;
 
     case TaskAttemptFinished:
     case TaskAttemptStarted:
     case TaskAttemptUnsuccessfulCompletion:
+      if (processTasks) {
         final TaskKey taskAttemptIdKey =
             getTaskKey(TASK_ATTEMPT_PREFIX, this.jobNumber, eventDetails.getString(ATTEMPTID));
         taskRecords.add(new JobHistoryTaskRecord(RecordCategory.HISTORY_TASK_META, taskAttemptIdKey,
@@ -583,12 +590,14 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
                 : RecordCategory.HISTORY_TASK_META, taskAttemptIdKey, key, value));
           }
         });  
+      }
       break;
 
     case TaskFailed:
     case TaskStarted:
     case TaskUpdated:
     case TaskFinished:
+      if (processTasks) {
         final TaskKey taskIdKey =
             getTaskKey(TASK_PREFIX, this.jobNumber, eventDetails.getString(TASKID));
         taskRecords.add(new JobHistoryTaskRecord(RecordCategory.HISTORY_TASK_META, taskIdKey,
@@ -601,6 +610,7 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
                 : RecordCategory.HISTORY_TASK_META, taskIdKey, key, value));
           }
         });        
+      }
       break;
     default:
       LOG.error("Check if recType was modified and has new members?");

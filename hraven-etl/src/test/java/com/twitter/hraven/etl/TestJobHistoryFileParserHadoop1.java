@@ -64,7 +64,7 @@ public class TestJobHistoryFileParserHadoop1 {
     assertTrue(historyFileParser instanceof JobHistoryFileParserHadoop1);
 
     JobKey jobKey = new JobKey("cluster1", "user1", "Sleep", 1, "job_201311192236_3583");
-    historyFileParser.parse(contents, jobKey);
+    historyFileParser.parse(contents, jobKey, true);
 
     JobHistoryRecordCollection jobRecords = (JobHistoryRecordCollection)historyFileParser.getJobRecords();
     assertNotNull(jobRecords);

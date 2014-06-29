@@ -53,10 +53,10 @@ public class JobHistoryFileParserHadoop1 extends JobHistoryFileParserBase {
 	 * 
 	 */
 	@Override
-	public void parse(byte[] historyFile, JobKey jobKey) throws ProcessingException {
+	public void parse(byte[] historyFile, JobKey jobKey, boolean processTasks) throws ProcessingException {
 
 		try {
-			jobHistoryListener = new JobHistoryListener(jobKey);
+			jobHistoryListener = new JobHistoryListener(jobKey, processTasks);
 			JobHistoryCopy.parseHistoryFromIS(new ByteArrayInputStream(historyFile), jobHistoryListener);
 			// set the hadoop version for this record
 			JobHistoryRecord versionRecord = getHadoopVersionRecord(JobHistoryFileParserFactory.getHistoryFileVersion1(), 
