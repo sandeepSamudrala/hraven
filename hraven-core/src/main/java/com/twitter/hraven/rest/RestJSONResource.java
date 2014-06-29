@@ -16,7 +16,9 @@ limitations under the License.
 package com.twitter.hraven.rest;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.DefaultValue;
@@ -36,7 +38,19 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
+import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.util.Bytes;
 
+import com.google.common.base.Predicate;
+import com.google.common.base.Stopwatch;
+import com.sun.jersey.core.util.Base64;
 import com.twitter.hraven.AppSummary;
 import com.twitter.hraven.Cluster;
 import com.twitter.hraven.Constants;
@@ -45,14 +59,17 @@ import com.twitter.hraven.HdfsConstants;
 import com.twitter.hraven.HdfsStats;
 import com.twitter.hraven.HravenResponseMetrics;
 import com.twitter.hraven.JobDetails;
+import com.twitter.hraven.JobKey;
 import com.twitter.hraven.TaskDetails;
 import com.twitter.hraven.datasource.AppSummaryService;
 import com.twitter.hraven.datasource.AppVersionService;
 import com.twitter.hraven.datasource.FlowKeyConverter;
 import com.twitter.hraven.datasource.HdfsStatsService;
 import com.twitter.hraven.datasource.JobHistoryService;
+import com.twitter.hraven.datasource.JobKeyConverter;
 import com.twitter.hraven.datasource.ProcessingException;
 import com.twitter.hraven.datasource.VersionInfo;
+import com.twitter.hraven.util.ByteUtil;
 
 /**
  * Main REST resource that handles binding the REST API to the JobHistoryService.
@@ -657,6 +674,67 @@ public class RestJSONResource {
        .set(timer.elapsed(TimeUnit.MILLISECONDS));
     return newApps;
  }
+  
+  @GET
+  @Path("graphite/mapping/{cluster}/{user}/{appId}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Map<String, String> getGraphitAppIdMapping(@PathParam("cluster") String cluster,
+                                   @PathParam("user") String user,
+                                   @PathParam("appId") String appId,
+                                   @QueryParam("limit") int limit)
+  throws IOException {
+
+    Stopwatch timer = new Stopwatch().start();
+    Map<String,String> graphiteKeys = new HashMap<String,String>();
+    byte[] rowPrefix = ByteUtil.join(Constants.SEP_BYTES,
+      Bytes.toBytes(cluster),
+      Bytes.toBytes(user),
+      Bytes.toBytes(appId));
+    
+    Scan scan = new Scan();
+    scan.setStartRow(rowPrefix);
+    scan.setCaching(Math.min(limit, HBASE_CONF.getInt("hbase.client.scanner.caching", 100)));
+    Filter prefixFilter = new WhileMatchFilter(new PrefixFilter(rowPrefix));
+    scan.setFilter(prefixFilter);
+
+    HTable keyMappingTable = new HTable(HBASE_CONF, Constants.GRAPHITE_KEY_MAPPING_TABLE_BYTES);
+    keyMappingTable.setAutoFlush(false);
+    
+    ResultScanner scanner = keyMappingTable.getScanner(scan);
+    JobKeyConverter jobKeyConv = new JobKeyConverter();
+    
+    for (Result result : scanner) {
+      JobKey currentKey = jobKeyConv.fromBytes(result.getRow());
+      graphiteKeys.put(currentKey.toString(), Bytes.toString(result.getColumn(Constants.INFO_FAM_BYTES, Constants.GRAPHITE_KEY_MAPPING_COLUMN_BYTES).get(0).getValue()));
+      if (graphiteKeys.size() >= limit)
+        break;
+    }
+    
+    keyMappingTable.close();
+    timer.stop();
+    LOG.info("Fetched graphite key for app/{cluster=" + cluster + "}/{user=" + user + "}/{appId=" + appId + "} in " + timer);
+    return graphiteKeys;
+
+  }
+  
+  @GET
+  @Path("graphite/reversemapping/{metrixPathPrefix}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public String getGraphitAppIdReverseMapping(@PathParam("metrixPathPrefix") String metrixPathPrefix,
+                                                           @QueryParam("limit") int limit)
+  throws IOException {
+
+    HTable keyMappingTable =
+        new HTable(HBASE_CONF, Constants.GRAPHITE_REVERSE_KEY_MAPPING_TABLE_BYTES);
+    keyMappingTable.setAutoFlush(false);
+    byte[] value =
+        keyMappingTable.get(new Get(Bytes.toBytes(metrixPathPrefix)))
+            .getColumn(Constants.INFO_FAM_BYTES, Constants.GRAPHITE_KEY_MAPPING_COLUMN_BYTES)
+            .get(0).getValue();
+    keyMappingTable.close();
+    byte[][] splits = ByteUtil.split(value, Constants.SEP_BYTES, 3);
+    return Bytes.toString(splits[0]) +  Constants.SEP + Bytes.toString(splits[1]) +  Constants.SEP + Bytes.toString(splits[2]);
+  }
 
   private AppSummaryService getAppSummaryService() {
     if (LOG.isDebugEnabled()) {
