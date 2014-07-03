@@ -168,7 +168,7 @@ public class RestJSONResource {
     }
     // export latency metrics
     HravenResponseMetrics.JOB_API_LATENCY_VALUE
-      .set(timer.elapsed(TimeUnit.MILLISECONDS));
+      .set(timer.elapsedTime(TimeUnit.MILLISECONDS));
 
     return jobDetails;
 
@@ -218,7 +218,7 @@ public class RestJSONResource {
 
     // export latency metrics
     HravenResponseMetrics.JOBFLOW_API_LATENCY_VALUE
-        .set(timer.elapsed(TimeUnit.MILLISECONDS));
+        .set(timer.elapsedTime(TimeUnit.MILLISECONDS));
     return flow;
   }
 
@@ -284,7 +284,7 @@ public class RestJSONResource {
 
     // export latency metrics
     HravenResponseMetrics.FLOW_VERSION_API_LATENCY_VALUE
-        .set(timer.elapsed(TimeUnit.MILLISECONDS));
+        .set(timer.elapsedTime(TimeUnit.MILLISECONDS));
     return flows;
   }
 
@@ -337,7 +337,7 @@ public class RestJSONResource {
 
     // export latency metrics
     HravenResponseMetrics.FLOW_API_LATENCY_VALUE
-        .set(timer.elapsed(TimeUnit.MILLISECONDS));
+        .set(timer.elapsedTime(TimeUnit.MILLISECONDS));
     return flows;
 
   }
@@ -430,7 +430,7 @@ public class RestJSONResource {
 
     // export latency metrics
     HravenResponseMetrics.FLOW_STATS_API_LATENCY_VALUE
-        .set(timer.elapsed(TimeUnit.MILLISECONDS));
+        .set(timer.elapsedTime(TimeUnit.MILLISECONDS));
     return flowStatsPage;
  }
 
@@ -462,7 +462,7 @@ public class RestJSONResource {
 
      // export latency metrics
      HravenResponseMetrics.APPVERSIONS_API_LATENCY_VALUE
-       .set(timer.elapsed(TimeUnit.MILLISECONDS));
+       .set(timer.elapsedTime(TimeUnit.MILLISECONDS));
      return distinctVersions;
   }
 
@@ -557,7 +557,7 @@ public class RestJSONResource {
 
     // export latency metrics
     HravenResponseMetrics.HDFS_STATS_API_LATENCY_VALUE
-      .set(timer.elapsed(TimeUnit.MILLISECONDS));
+      .set(timer.elapsedTime(TimeUnit.MILLISECONDS));
     return hdfsStats;
   }
 
@@ -618,7 +618,7 @@ public class RestJSONResource {
 
     // export latency metrics
     HravenResponseMetrics.HDFS_TIMESERIES_API_LATENCY_VALUE
-       .set(timer.elapsed(TimeUnit.MILLISECONDS));
+       .set(timer.elapsedTime(TimeUnit.MILLISECONDS));
     return hdfsStats;
   }
 
@@ -671,7 +671,7 @@ public class RestJSONResource {
 
    // export latency metrics
    HravenResponseMetrics.NEW_JOBS_API_LATENCY_VALUE
-       .set(timer.elapsed(TimeUnit.MILLISECONDS));
+       .set(timer.elapsedTime(TimeUnit.MILLISECONDS));
     return newApps;
  }
   
