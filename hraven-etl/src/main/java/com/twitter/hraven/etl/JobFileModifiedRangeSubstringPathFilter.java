@@ -162,13 +162,13 @@ public class JobFileModifiedRangeSubstringPathFilter extends JobFilePathFilter {
   private boolean includesPathSubstrings(Path path) {
     if (pathInclusionFilter == null)
       return true;
-    boolean matches = false;
+
     for (String s: pathInclusionFilter) {
       if (path.toString().indexOf(s) != -1)
-        matches = true;
+        return true;
     }
     
-    return matches;
+    return false;
   }
 
   /**

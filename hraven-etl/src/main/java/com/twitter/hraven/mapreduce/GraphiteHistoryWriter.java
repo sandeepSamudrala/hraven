@@ -2,23 +2,17 @@ package com.twitter.hraven.mapreduce;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.kenai.jffi.Array;
 import com.twitter.hraven.Constants;
 import com.twitter.hraven.Framework;
 import com.twitter.hraven.HravenService;
@@ -54,7 +48,8 @@ public class GraphiteHistoryWriter {
   private List<String> userFilter;
   private List<String> queueFilter;
   private List<String> excludedComponents;
-  private List<String> doNotExcludeApps;
+  private List<String> appInclusionFilter;
+  private List<String> appExclusionFilter;
   
   private HTable keyMappingTable;
   private HTable reverseKeyMappingTable;
@@ -74,7 +69,7 @@ public class GraphiteHistoryWriter {
    */
 
   public GraphiteHistoryWriter(HTable keyMappingTable, HTable reverseKeyMappingTable, String prefix, HravenService serviceKey,
-      JobHistoryRecordCollection recordCollection, StringBuilder sb, String userFilter, String queueFilter, String excludedComponents, String doNotExcludeApps) {
+      JobHistoryRecordCollection recordCollection, StringBuilder sb, String userFilter, String queueFilter, String excludedComponents, String appInclusionFilter, String appExclusionFilter) {
     this.keyMappingTable = keyMappingTable;
     this.reverseKeyMappingTable = reverseKeyMappingTable;
     this.service = serviceKey;
@@ -87,10 +82,37 @@ public class GraphiteHistoryWriter {
       this.queueFilter = Arrays.asList(queueFilter.split(","));
     if (StringUtils.isNotEmpty(excludedComponents))
       this.excludedComponents = Arrays.asList(excludedComponents.split(","));
-    if (StringUtils.isNotEmpty(doNotExcludeApps))
-      this.doNotExcludeApps = Arrays.asList(doNotExcludeApps.split(","));
+    if (StringUtils.isNotEmpty(appInclusionFilter))
+      this.appInclusionFilter = Arrays.asList(appInclusionFilter.split(","));
+    if (StringUtils.isNotEmpty(appExclusionFilter))
+      this.appExclusionFilter = Arrays.asList(appExclusionFilter.split(","));
   }
 
+  private boolean isAppExcluded(String appId) {
+    if (this.appExclusionFilter == null)
+      return false;
+    
+    for (String s: appExclusionFilter) {
+      if (appId.indexOf(s) != -1)
+        return true;
+    }
+    
+    return false;
+  }
+  
+  private boolean isAppIncluded(String appId) {
+    if (this.appInclusionFilter == null)
+      return true;
+    
+    for (String s: this.appInclusionFilter) {
+      if (appId.indexOf(s) != -1) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
   public int write() throws IOException {
     /*
      * Send metrics in the format {PREFIX}.{cluster}.{user}.{appId}.{subAppId} {value}
@@ -101,25 +123,11 @@ public class GraphiteHistoryWriter {
 
     int lineCount = 0;
     
-    boolean inDoNotExcludeApps = false;
-    
-    if (doNotExcludeApps != null) {
-      for (String appStr: this.doNotExcludeApps) {
-        if (recordCollection.getKey().getAppId().indexOf(appStr) != -1) {
-          inDoNotExcludeApps = true;
-          break;
-        }
-      }  
-    }
-    
     if ( 
-        // exclude from further filters if appId matches list of doNotExcludeApps substrings
-        inDoNotExcludeApps ||
-        
-        // or it must pass the user and queue filters, if not null 
         ( (userFilter == null || userFilter.contains(recordCollection.getKey().getUserName())) &&
          (queueFilter == null || queueFilter.contains(recordCollection.getValue(RecordCategory.CONF_META,
-                                                                           new RecordDataKey(Constants.HRAVEN_QUEUE)))) )
+                                                                           new RecordDataKey(Constants.HRAVEN_QUEUE)))) ) ||
+        (isAppIncluded(recordCollection.getKey().getAppId()) && !isAppExcluded(recordCollection.getKey().getAppId()))
       ) {
       
       Framework framework = getFramework(recordCollection);
