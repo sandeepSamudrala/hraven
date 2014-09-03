@@ -344,7 +344,10 @@ public class JobFileRawLoader extends Configured implements Tool {
    * @throws Exception 
    */
   public static void main(String[] args) throws Exception {
-    ToolRunner.run(new JobFileRawLoader(), args);
+    int res = ToolRunner.run(new JobFileRawLoader(), args);
+
+    if (res == 1)
+        throw new RuntimeException("Job Failed");
   }
 
 }

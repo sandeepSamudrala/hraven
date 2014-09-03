@@ -566,7 +566,10 @@ public class JobFilePreprocessor extends Configured implements Tool {
    * @throws Exception 
    */
   public static void main(String[] args) throws Exception {
-    ToolRunner.run(new JobFilePreprocessor(), args);
+    int res = ToolRunner.run(new JobFilePreprocessor(), args);
+
+    if (res == 1)
+        throw new RuntimeException("Job Failed");
   }
 
 }

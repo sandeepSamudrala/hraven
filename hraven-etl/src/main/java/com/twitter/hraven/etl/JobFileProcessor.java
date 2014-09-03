@@ -709,7 +709,10 @@ public class JobFileProcessor extends Configured implements Tool {
    * @throws Exception
    */
   public static void main(String[] args) throws Exception {
-    ToolRunner.run(new JobFileProcessor(), args);
+    int res = ToolRunner.run(new JobFileProcessor(), args);
+    
+    if (res == 1)
+        throw new RuntimeException("Job Failed");
   }
 
 }
