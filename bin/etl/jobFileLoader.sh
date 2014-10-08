@@ -38,4 +38,4 @@ fi
 create_pidfile $HRAVEN_PID_DIR
 trap 'cleanup_pidfile_and_exit $HRAVEN_PID_DIR' INT TERM EXIT
 
-hadoop --config $1 jar $hravenEtlJar com.twitter.hraven.etl.JobFileRawLoader -libjars=$LIBJARS -Dmapred.max.split.size=$2 -Dmapred.fairscheduler.pool=$3 -d -c $4 -p $5
+hadoop --config $1 jar $hravenEtlJar com.twitter.hraven.etl.JobFileRawLoader -libjars=$LIBJARS -Dmapred.max.split.size=$2 -Dmapred.fairscheduler.pool=$3 -d -c $4 -p $5 "${@:6}"

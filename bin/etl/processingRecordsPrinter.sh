@@ -28,7 +28,7 @@ then
 fi
 
 home=$(dirname $0)
-source $home/../../conf/hraven-env.sh
+source $home/hraven-etl-env.sh
 hravenEtlJar=$home/../../lib/hraven-etl.jar
 LIBJARS=$home/../../lib/hraven-core.jar
 

@@ -203,6 +203,9 @@
   <profiles>
     <profile>
       <id>sonatype-oss-release</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
       <build>
         <plugins>
           <plugin>
@@ -248,6 +251,40 @@
         </plugins>
       </build>
     </profile>
+    <profile>
+            <id>cdh3</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <hbase.version>0.90.6-cdh3u5</hbase.version>
+                <hadoop.version>1.0.4</hadoop.version>
+                <commons-logging.version>1.1.1</commons-logging.version>
+                <junit.version>4.8.1</junit.version>
+                <mockito-all.version>1.8.5</mockito-all.version>
+                <log4j.version>1.2.15</log4j.version>
+                <guava.version>12.0</guava.version>
+                <jersey.version>1.12</jersey.version>
+                <jackson.version>1.9.6</jackson.version>
+            </properties>
+        </profile>
+        <profile>
+            <id>cdh4</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <hbase.version>0.94.6-cdh4.3.0</hbase.version>
+                <hadoop.version>2.0.0-cdh4.3.0</hadoop.version>
+                <hadoop.core.version>2.0.0-mr1-cdh4.3.0</hadoop.core.version>
+                <commons-logging.version>1.1.1</commons-logging.version>
+                <junit.version>4.8.1</junit.version>
+                <mockito-all.version>1.8.5</mockito-all.version>
+                <log4j.version>1.2.15</log4j.version>
+                <guava.version>12.0</guava.version>
+                <jersey.version>1.12</jersey.version>
+                <jackson.version>1.9.6</jackson.version>
+            </properties>
+        </profile>
   </profiles>
-
 </project>
