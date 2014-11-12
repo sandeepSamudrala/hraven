@@ -21,7 +21,7 @@
   <parent>
     <groupId>com.twitter.hraven</groupId>
     <artifactId>hraven</artifactId>
-    <version>0.9.16.inmobi-SNAPSHOT</version>
+    <version>0.9.16.inmobi-r31-SNAPSHOT</version>
     <relativePath>../</relativePath>
   </parent>
   <artifactId>hraven-etl</artifactId>
@@ -156,11 +156,21 @@
   </build>
 
   <dependencies>
-
+	<dependency>
+	  <groupId>org.projectlombok</groupId>
+	  <artifactId>lombok</artifactId>
+	  <version>${lombok.version}</version>
+	  <scope>compile</scope>
+	</dependency>
+  <dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-expression</artifactId>
+    <version>4.1.2.RELEASE</version>
+  </dependency>
     <dependency>
       <groupId>com.twitter.hraven</groupId>
       <artifactId>hraven-core</artifactId>
-      <version>0.9.16.inmobi-SNAPSHOT</version>
+      <version>0.9.16.inmobi-r31-SNAPSHOT</version>
     </dependency>
 
 <!--     <dependency>

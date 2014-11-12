@@ -1,0 +1,44 @@
+###
+# Graphite metric naming rules
+###
+# You may use the following hraven provided tokens to filter and name metrics:
+
+###
+# General tokens:
+###
+# $cluster 			Cluster from currently configured hraven run
+# $queue			Queue name (from job xml)
+# $user				User name (from job xml)
+# $jobId			Hadoop Job ID
+# $encodedRunId		hRaven's encodedRunId of the job
+# $runId			hRaven's runID of the job
+# $jobName			Job name
+# $framework		pig, cascading, MR, etc.
+# $success			Succeeded of a failed job
+# $appVersion		hRaven derived app version
+
+###
+# Oozie tokens:
+###
+# $oozieActionName	Derived from oozie.action.id
+# $oozieLauncherPattern	ozl:$1:$2:$3, derived from pattern ".*oozie:launcher:T=(.*):W=(.*):A=(.*):ID=(.*)"
+# $oozieActionPattern oza:$1:$2:$3:$4, derived from pattern ".*oozie:action:T=(.*):W=(.*):A=(.*):ID=[0-9]{7}-[0-9]{15}-oozie-oozi-W(.*)"
+
+###
+# Pig specific tokens:
+###
+# $pigAliasFp		pig.alias:pig.job.feature
+# $pigAlias			pig.alias
+# $pigFeature		pig.job.feature
+
+###
+# Special tokens:
+###
+# $c[prop]			Any property from job configuration xml
+# $t[name]			Custom tag supplied in hraven.metric.tags job config property
+# $regJobName		Job name with a regex applied (specified in config)
+
+###
+# Rules will be evaluated in order, and the first one that matches will be used
+# If any token is null, it will be substituted with the token name itself
+###

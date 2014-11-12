@@ -1,0 +1,26 @@
+{
+   [
+      {
+         "filter":"#user == 'userplatform' && #queue == 'userplatform' && #framework == 'PIG' && conf('hraven.metric.tags')!=null",
+         "name":"#path(#cluster,#queue,#user,'instrumented',#status,#tag('group'),#tag('artifact'),#tag('process'),#oozieActionName,'PIG','v' + #appVersion,#pigAliasFp)"
+      },
+      {
+         "filter":"#user == 'userplatform' && #queue == 'userplatform' && #conf('hraven.metric.tags')!=null",
+         "name":"#path(#cluster,#queue,#user,'instrumented',#status,#tag('group'),#tag('artifact'),#tag('process'),#oozieActionName)"
+      },
+      {
+         "filter":"#user == 'userplatform' && #queue == 'userplatform'",
+         "name":"#path(#cluster,#queue,#user,'all',#status,#regJobName)",
+         "replace":[
+            {
+               "regex":".*oozie:launcher:T=(.*):W=(.*):A=(.*):ID=(.*)",
+               "with":"ozl:$1:$2:$3"
+            },
+            {
+               "regex":".*oozie:action:T=(.*):W=(.*):A=(.*):ID=[0-9]{7}-[0-9]{15}-oozie-oozi-W(.*)",
+               "with":"oza:$1:$2:$3:$4"
+            }
+         ]
+      }
+   ]
+}

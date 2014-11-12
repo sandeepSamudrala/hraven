@@ -21,7 +21,7 @@
   <parent>
     <groupId>com.twitter.hraven</groupId>
     <artifactId>hraven</artifactId>
-    <version>0.9.16.inmobi-SNAPSHOT</version>
+    <version>0.9.16.inmobi-r31-SNAPSHOT</version>
     <relativePath>../</relativePath>
   </parent>
   <artifactId>hraven-core</artifactId>

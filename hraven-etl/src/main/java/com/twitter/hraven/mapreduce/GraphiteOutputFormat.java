@@ -88,20 +88,23 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
     // comma seperated list of app substrings to include
     private String appInclusionFilter;
     
- // comma seperated list of app substrings to exclude
+    //comma seperated list of app substrings to exclude
     private String appExclusionFilter;
     
     private HTable keyMappingTable;
     private HTable reverseKeyMappingTable;
+
+    private String metricNamingRules;
     
 
-    public GraphiteRecordWriter(Configuration hbaseconfig, String host, int port, String prefix, String userFilter, String queueFilter, String excludedComponents, String appInclusionFilter, String appExclusionFilter) throws IOException {
+    public GraphiteRecordWriter(Configuration hbaseconfig, String host, int port, String prefix, String userFilter, String queueFilter, String excludedComponents, String appInclusionFilter, String appExclusionFilter, String metricNamingRules) throws IOException {
       this.METRIC_PREFIX = prefix;
       this.userFilter = userFilter;
       this.queueFilter = queueFilter;
       this.excludedComponents = excludedComponents;
       this.appInclusionFilter = appInclusionFilter;
       this.appExclusionFilter = appExclusionFilter;
+      this.metricNamingRules = metricNamingRules;
       
       keyMappingTable = new HTable(hbaseconfig, Constants.GRAPHITE_KEY_MAPPING_TABLE_BYTES);
       keyMappingTable.setAutoFlush(false);
@@ -140,7 +143,7 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
 
       try {
         GraphiteHistoryWriter graphiteWriter =
-            new GraphiteHistoryWriter(keyMappingTable, reverseKeyMappingTable, METRIC_PREFIX, service, recordCollection, output, userFilter, queueFilter, excludedComponents, appInclusionFilter, appExclusionFilter);
+            new GraphiteHistoryWriter(keyMappingTable, reverseKeyMappingTable, METRIC_PREFIX, service, recordCollection, output, userFilter, queueFilter, excludedComponents, appInclusionFilter, appExclusionFilter, metricNamingRules);
         lines = graphiteWriter.write();
       } catch (Exception e) {
         LOG.error("Error generating metrics for graphite", e);
@@ -196,7 +199,8 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
                                     conf.get(Constants.JOBCONF_GRAPHITE_QUEUE_FILTER),
                                     conf.get(Constants.JOBCONF_GRAPHITE_EXCLUDED_COMPONENTS),
                                     conf.get(Constants.JOBCONF_GRAPHITE_INCLUDE_APPS),
-                                    conf.get(Constants.JOBCONF_GRAPHITE_EXCLUDE_APPS)
+                                    conf.get(Constants.JOBCONF_GRAPHITE_EXCLUDE_APPS),
+                                    conf.get(Constants.JOBCONF_GRAPHITE_NAMING_RULE_CONFIG)
                                     );
   }
 
