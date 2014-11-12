@@ -1,8 +1,12 @@
 package com.twitter.hraven.etl;
 
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.TimeZone;
 
 import org.apache.commons.cli.CommandLine;
@@ -44,7 +48,7 @@ public class JobFileReprocessor extends Configured implements Tool {
 
     private static final String DATE_FORMAT = "dd/MM/yyyy-HH:mm:ss";
     final static String NAME = JobFileReprocessor.class.getSimpleName();
-    private static Log LOG = LogFactory.getLog(JobFileProcessor.class);
+    private static Log LOG = LogFactory.getLog(JobFileReprocessor.class);
 
     private static CommandLine parseArgs(String[] args) throws ParseException {
         Options options = new Options();
@@ -92,18 +96,7 @@ public class JobFileReprocessor extends Configured implements Tool {
         return commandLine;
       }
 
-    @Override
-    public int run(String[] args) throws Exception {
-        Configuration hbaseConf = HBaseConfiguration.create(getConf());
-        
-        String[] otherArgs = new GenericOptionsParser(hbaseConf, args).getRemainingArgs();
-        CommandLine commandLine = parseArgs(otherArgs);
-        
-        String cluster = commandLine.getOptionValue("c");
-        String startDate = commandLine.getOptionValue("sd");
-        String endDate = commandLine.getOptionValue("ed");
-        String includeAppStr = commandLine.getOptionValue("a");
-
+    public void reprocessJobs(String cluster, String startDate, String endDate, List<String> includeApps, Configuration hbaseConf) throws IOException, ParseException {
         QualifiedJobIdConverter idConv = new QualifiedJobIdConverter();
         SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
         sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
@@ -130,9 +123,8 @@ public class JobFileReprocessor extends Configured implements Tool {
         filters.addFilter(startDateFilter);
         filters.addFilter(endDateFilter);
 
-        if (includeAppStr != null) {
+        if (includeApps != null) {
             FilterList includeAppFilter = new FilterList(FilterList.Operator.MUST_PASS_ONE);
-            String[] includeApps = includeAppStr.split(",");
 
             for (String includeApp: includeApps) {
                 includeAppFilter.addFilter(new SingleColumnValueFilter(Constants.INFO_FAM_BYTES,
@@ -167,6 +159,39 @@ public class JobFileReprocessor extends Configured implements Tool {
         }
 
         jobHistoryRaw.close();
+    }
+    
+    @Override
+    public int run(String[] args) throws Exception {
+        Configuration hbaseConf = HBaseConfiguration.create(getConf());
+        
+        String[] otherArgs = new GenericOptionsParser(hbaseConf, args).getRemainingArgs();
+        CommandLine commandLine = parseArgs(otherArgs);
+        
+        String cluster = commandLine.getOptionValue("c");
+        String startDate = commandLine.getOptionValue("sd");
+        String endDate = commandLine.getOptionValue("ed");
+        String includeAppStr = commandLine.getOptionValue("a");
+
+        if (includeAppStr != null) {
+            List<String> includeApps = Arrays.asList(includeAppStr.split(","));
+            if (includeApps.size() > 5) {
+                LOG.info("More than 5 apps to filter. Splitting into batches");
+                int appI = 0;
+                while (appI < includeApps.size()) {
+                    LOG.info("Reprocessing app filter batch " + appI + " to " + (int)((int)appI+(int)5));
+                    reprocessJobs(cluster, startDate, endDate, includeApps.subList(appI,
+                            appI + 5 <= includeApps.size() ? appI + 5 : includeApps.size()),
+                            hbaseConf);
+                    appI += 5;
+                }
+            } else {
+                LOG.info("Reprocessing with app filter: " + includeAppStr);
+                reprocessJobs(cluster, startDate, endDate, includeApps, hbaseConf);
+            }
+        } else {
+            reprocessJobs(cluster, startDate, endDate, null, hbaseConf);
+        }
 
         return 0;
     }
