@@ -170,7 +170,7 @@
     <dependency>
       <groupId>com.twitter.hraven</groupId>
       <artifactId>hraven-core</artifactId>
-      <version>0.9.16.inmobi-r31-SNAPSHOT</version>
+      <version>${project.version}</version>
     </dependency>
 
 <!--     <dependency>

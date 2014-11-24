@@ -1,26 +1,40 @@
-{
-   [
-      {
-         "filter":"#user == 'userplatform' && #queue == 'userplatform' && #framework == 'PIG' && conf('hraven.metric.tags')!=null",
-         "name":"#path(#cluster,#queue,#user,'instrumented',#status,#tag('group'),#tag('artifact'),#tag('process'),#oozieActionName,'PIG','v' + #appVersion,#pigAliasFp)"
-      },
-      {
-         "filter":"#user == 'userplatform' && #queue == 'userplatform' && #conf('hraven.metric.tags')!=null",
-         "name":"#path(#cluster,#queue,#user,'instrumented',#status,#tag('group'),#tag('artifact'),#tag('process'),#oozieActionName)"
-      },
-      {
-         "filter":"#user == 'userplatform' && #queue == 'userplatform'",
-         "name":"#path(#cluster,#queue,#user,'all',#status,#regJobName)",
-         "replace":[
+[
+    {
+        "filter": "#conf('hraven.metric.tags')!=null && #framework == 'PIG' && #user == 'userplatform' && #queue == 'userplatform'",
+        "name": "c:#{#cluster}.q:#{#queue}.u:#{#user}.instrumented.s:#{#status}.g:#{#tag['group']}.a:#{#tag['artifact']}.p:#{#tag['process']}.oza:#{#oozieActionName}.PIG.v:#{#appVersion}.#{#pigAliasFp}"
+    },
+    {
+        "filter": "#conf('hraven.metric.tags')!=null && #oozieActionPattern != null && #oozieActionName != null && #user == 'userplatform' && #queue == 'userplatform'",
+        "name": "c:#{#cluster}.q:#{#queue}.u:#{#user}.instrumented.s:#{#status}.g:#{#tag['group']}.a:#{#tag['artifact']}.p:#{#tag['process']}.oza:#{#oozieActionName}.#{#oozieActionPattern}"
+    },
+    {
+        "filter": "#conf('hraven.metric.tags')!=null && #oozieLauncherPattern != null && #oozieActionName != null && #user == 'userplatform' && #queue == 'userplatform'",
+        "name": "c:#{#cluster}.q:#{#queue}.u:#{#user}.instrumented.s:#{#status}.g:#{#tag['group']}.a:#{#tag['artifact']}.p:#{#tag['process']}.oza:#{#oozieActionName}.#{#oozieLauncherPattern}"
+    },
+    {
+        "filter": "#conf('hraven.metric.tags')!=null && #oozieActionPattern != null && #user == 'userplatform' && #queue == 'userplatform'",
+        "name": "c:#{#cluster}.q:#{#queue}.u:#{#user}.instrumented.s:#{#status}.g:#{#tag['group']}.a:#{#tag['artifact']}.p:#{#tag['process']}.#{#oozieActionPattern}"
+    },
+    {
+        "filter": "#conf('hraven.metric.tags')!=null && #oozieLauncherPattern != null && #user == 'userplatform' && #queue == 'userplatform'",
+        "name": "c:#{#cluster}.q:#{#queue}.u:#{#user}.instrumented.s:#{#status}.g:#{#tag['group']}.a:#{#tag['artifact']}.p:#{#tag['process']}.#{#oozieLauncherPattern}"
+    },
+    {
+        "filter": "#user == 'userplatform' && #queue == 'userplatform' && #conf('hraven.metric.tags')!=null",
+        "name": "c:#{#cluster}.q:#{#queue}.u:#{#user}.instrumented.s:#{#status}.g:#{#tag['group']}.a:#{#tag['artifact']}.p:#{#tag['process']}.oza:#{#oozieActionName}"
+    },
+    {
+        "filter": "#user == 'userplatform' && #queue == 'userplatform'",
+        "name": "c:#{#cluster}.q:#{#queue}.u:#{#user}.all.s:#{#status}.j:#{#regJobName}",
+        "replace": [
             {
-               "regex":".*oozie:launcher:T=(.*):W=(.*):A=(.*):ID=(.*)",
-               "with":"ozl:$1:$2:$3"
+                "regex": ".*oozie:launcher:T=(.*):W=(.*):A=(.*):ID=(.*)",
+                "with": "ozl:$1:$2:$3"
             },
             {
-               "regex":".*oozie:action:T=(.*):W=(.*):A=(.*):ID=[0-9]{7}-[0-9]{15}-oozie-oozi-W(.*)",
-               "with":"oza:$1:$2:$3:$4"
+                "regex": ".*oozie:action:T=(.*):W=(.*):A=(.*):ID=[0-9]{7}-[0-9]{15}-oozie-oozi-W(.*)",
+                "with": "oza:$1:$2:$3:$4"
             }
-         ]
-      }
-   ]
-}
+        ]
+    }
+]

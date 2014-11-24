@@ -21,7 +21,7 @@
 #   [schedulerpoolname] [historyprocessingdir] [cluster] [threads] [batchsize] [machinetype] [costfile]
 # a sample cost file can be found in the conf dir as sampleCostDetails.properties
 
-if [ $# -ne 10 ]
+if [ $# -lt 10 ]
 then
   echo "Usage: `basename $0` [hbaseconfdir] [schedulerpoolname] [historyprocessingdir] [cluster] [threads] [batchsize] [machinetype] [sinks] [costfilehdfspath] [taskhistoryprocessing]"
   exit 1
@@ -40,4 +40,4 @@ fi
 create_pidfile $HRAVEN_PID_DIR
 trap 'cleanup_pidfile_and_exit $HRAVEN_PID_DIR' INT TERM EXIT
 
-hadoop --config $1 jar $hravenEtlJar com.twitter.hraven.etl.JobFileProcessor -libjars=$LIBJARS -Dmapred.fairscheduler.pool=$2 -d -p $3 -c $4 -t $5 -b $6 -m $7 -s $8 -zf $9 -tt ${10} "${@:11}"
+hadoop --config $1 jar $hravenEtlJar com.twitter.hraven.etl.JobFileProcessor -libjars=$LIBJARS -Dmapred.fairscheduler.pool=$2 "${@:11}" -d -p $3 -c $4 -t $5 -b $6 -m $7 -s $8 -zf $9 -tt ${10}

@@ -19,7 +19,7 @@
 # Usage ./jobFilePreprocessor.sh [hadoopconfdir]
 #   [historyrawdir] [historyprocessingdir] [cluster] [batchsize]
 
-if [ $# -lt 7 ]
+if [ $# -lt 9 ]
 then
   echo "Usage: `basename $0` [hadoopconfdir] [historyBasePath] [historyrawdir] [historyprocessingdir] [cluster] [batchsize] [defaultrawfilesizelimit] [[pathExclusionFilter]] [[pathInclusionFilter]]"
   exit 1
@@ -39,4 +39,4 @@ fi
 create_pidfile $HRAVEN_PID_DIR
 trap 'cleanup_pidfile_and_exit $HRAVEN_PID_DIR' INT TERM EXIT
 
-hadoop --config $1 jar $hravenEtlJar com.twitter.hraven.etl.JobFilePreprocessor -libjars=$LIBJARS -d -bi $2 -i $3 -o $4 -c $5 -b $6 -s $7 -ex $8 -ix $9 "${@:10}"
+hadoop --config $1 jar $hravenEtlJar com.twitter.hraven.etl.JobFilePreprocessor -libjars=$LIBJARS "${@:10}" -d -bi $2 -i $3 -o $4 -c $5 -b $6 -s $7 -ex $8 -ix $9

@@ -21,7 +21,7 @@
 #   [schedulerpoolname] [historyprocessingdir] [cluster] [threads] [batchsize] [machinetype] [costfile]
 # a sample cost file can be found in the conf dir as sampleCostDetails.properties
 
-if [ $# -ne 10 ]
+if [ $# -lt 3 ]
 then
   echo "Usage: `basename $0` [startDate] [endDate] [appFilter]"
   exit 1

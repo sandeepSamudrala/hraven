@@ -65,9 +65,11 @@ public class HbaseHistoryWriter {
           break;
         case MAP_COUNTERS:
           counterPrefix = Bytes.add(Constants.MAP_COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
+          break;
         case REDUCE_COUNTERS:
           counterPrefix =
               Bytes.add(Constants.REDUCE_COUNTER_COLUMN_PREFIX_BYTES, Constants.SEP_BYTES);
+          break;
         default:
           throw new IllegalArgumentException("Unknown counter type " + dataKey.toString());
         }

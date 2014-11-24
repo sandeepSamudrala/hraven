@@ -31,12 +31,12 @@
     <dependency>
       <groupId>com.twitter.hraven</groupId>
       <artifactId>hraven-core</artifactId>
-      <version>0.9.16.inmobi-SNAPSHOT</version>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>com.twitter.hraven</groupId>
       <artifactId>hraven-etl</artifactId>
-      <version>0.9.16.inmobi-SNAPSHOT</version>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
   <build>
@@ -152,6 +152,20 @@
                     <type>perm</type>
                     <prefix>/opt/hraven/lib</prefix>
                   </mapper>
+                </data>
+
+                <data>
+                  <type>link</type>
+                  <linkName>/opt/hraven/lib/hraven-etl.jar</linkName>
+                  <linkTarget>./hraven-etl-${project.version}.jar</linkTarget>
+                  <symlink>true</symlink>
+                </data>
+
+                <data>
+                  <type>link</type>
+                  <linkName>/opt/hraven/lib/hraven-core.jar</linkName>
+                  <linkTarget>./hraven-core-${project.version}.jar</linkTarget>
+                  <symlink>true</symlink>
                 </data>
 
               </dataSet>

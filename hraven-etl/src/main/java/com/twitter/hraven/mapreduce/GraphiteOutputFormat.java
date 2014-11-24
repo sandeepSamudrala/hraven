@@ -147,6 +147,7 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
         lines = graphiteWriter.write();
       } catch (Exception e) {
         LOG.error("Error generating metrics for graphite", e);
+        throw new IOException(e);
       }
 
       if (output.length() > 0) {
@@ -156,7 +157,7 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
           writer.write(output.toString());
         } catch (Exception e) {
           LOG.error("Error sending metrics to graphite", e);
-          throw new IOException("Error sending metrics", e);
+          throw new IOException(e);
         }  
       }
     }

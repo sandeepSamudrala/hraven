@@ -25,6 +25,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.common.TemplateParserContext;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
@@ -150,8 +151,9 @@ public class GraphiteHistoryWriter {
         put("encodedRunId", Long.toString(recordCollection.getKey().getEncodedRunId()));
         put("runId", Long.toString(recordCollection.getKey().getRunId()));
         put("jobName", recordCollection.getKey().getAppId());
-        put("framework", getFramework().getCode());
+        put("framework", getFramework().name());
         put("status", getJobStatus());
+        put("priority", getJobPriority());
         put("appVersion", getVersion());
         
         //Oozie tokens
@@ -169,18 +171,16 @@ public class GraphiteHistoryWriter {
   
   private Map<String, String> getUserTags() {
     String confHravenMetricTags = (String)recordCollection.getValue(RecordCategory.CONF, new RecordDataKey(Constants.JOBCONF_HRAVEN_METRIC_TAGS));
+    Map<String, String> userTags = new HashMap<String, String>();
     
     if (confHravenMetricTags != null) {
-      Map<String, String> userTags = new HashMap<String, String>();
       for (String ele: confHravenMetricTags.split(",")) {
         String[] tag = ele.split("=");
         userTags.put(tag[0], tag[1]);
       }
-      
-      return userTags;  
-    } else {
-      return null;
     }
+    
+    return userTags;
   }
   
   private List<NamingRule> getRuleConfig (String fsFile, Configuration conf) throws IOException {
@@ -221,16 +221,25 @@ public class GraphiteHistoryWriter {
     return ruleConfig;
   }
   
-  private Expression getParsedExpression(String exp) {
-    exp = exp.replaceAll("#conf\\((.*)\\)", "#conf(recordCollection,$1)");
+  private Expression getParsedExpression(String exp, boolean template) {
+    exp = exp.replaceAll("#conf\\((.*)\\)", "#conf(#records,$1)");
+    exp = exp.replaceAll("#\\{([^.]*)\\}", "#{#sanitize($1)}");
+    
     ExpressionParser parser = new SpelExpressionParser();
-    return parser.parseExpression(exp);
+    
+    if (template) {
+      return parser.parseExpression(exp, new TemplateParserContext());  
+    } else {
+      return parser.parseExpression(exp);
+    }
   }
-  
+
   private String getMetricsPath() throws IOException {
+      //TODO: move the initialization part out, so that it happens only once per mapper
       String metricsPath = null;
       
       String defaultRule = "#path(#cluster,#queue,#user,'all',#status,#jobName)";
+      
       StandardEvaluationContext context = new StandardEvaluationContext();
       Map<String, Object> systemTokens = getSystemTokens();
       Map<String, String> userTokens = getUserTags();
@@ -238,22 +247,24 @@ public class GraphiteHistoryWriter {
       try {
         context.registerFunction("path", GraphiteHistoryWriter.class.getDeclaredMethod("getDotPath", String[].class));
         context.registerFunction("sanitize", GraphiteHistoryWriter.class.getDeclaredMethod("sanitize",String.class));
-        context.registerFunction("conf", GraphiteHistoryWriter.class.getDeclaredMethod("getJobConfProp", new Class[] {JobHistoryRecordCollection.class, String[].class}));
+        context.registerFunction("conf", GraphiteHistoryWriter.class.getDeclaredMethod("getJobConfProp", new Class[] {JobHistoryRecordCollection.class, String.class}));
       } catch (SecurityException e) {
         LOG.error("SecurityException while adding methods to SEPL context", e);
+        throw new RuntimeException(e);
       } catch (NoSuchMethodException e) {
         LOG.error("NoSuchMethodException while adding methods to SEPL context", e);
+        throw new RuntimeException(e);
       }
       context.setVariables(systemTokens);
       context.setVariable("tag", userTokens);
-      context.setVariable("recordCollection", recordCollection);
+      context.setVariable("records", recordCollection);
       
       List<NamingRule> rules = getRuleConfig(metricNamingRuleFile, new Configuration());
       
       boolean ruleMatched = false;
       
       for (NamingRule rule: rules) {
-        Expression filterExp = getParsedExpression(rule.getFilter());
+        Expression filterExp = getParsedExpression(rule.getFilter(), false);
         if (filterExp.getValue(context, Boolean.class)) {
           String regJobName = recordCollection.getKey().getAppId();
           if (rule.getReplace() != null) {
@@ -267,7 +278,7 @@ public class GraphiteHistoryWriter {
           }
           context.setVariable("regJobName", regJobName);
           
-          Expression nameExp = getParsedExpression(rule.getName());
+          Expression nameExp = getParsedExpression(rule.getName(), true);
           metricsPath = nameExp.getValue(context, String.class);
           ruleMatched = true;
           break;
@@ -278,11 +289,7 @@ public class GraphiteHistoryWriter {
         ExpressionParser parser = new SpelExpressionParser();
         Expression exp = parser.parseExpression(defaultRule);
         metricsPath = exp.getValue(context, String.class);
-      }
-      
-      if (metricsPath == null) {
-        metricsPath = recordCollection.getKey().getAppId();
-        LOG.error("Generated metric path is null for app " + recordCollection.getKey().toString());
+        LOG.warn("Defaulting to default metric path naming rule for app " + recordCollection.getKey().toString());
       }
       
       return metricsPath;
@@ -290,16 +297,14 @@ public class GraphiteHistoryWriter {
   
   public int write() throws IOException {
     /*
-     * Send metrics in the format {PREFIX}.{cluster}.{user}.{appId}.{subAppId} {value}
-     * {submit_time} subAppId is formed differently for each framework. For pig, its the alias
-     * names and feature used in the job. appId will be parsed with a bunch of known patterns
-     * (oozie launcher jobs, pig jobs, etc.)
+     * Send metrics in the format {PREFIX}.{metricsPath} {value} {submit_time}
+     * {metricsPath} is formed using a rule based tokenized format
      */
 
     int lineCount = 0;
     
     if (filterApp()) {
-      String metricsPath = getMetricsPath();
+      String metricsPath = prefix + "." + getMetricsPath();
       
       try {
         storeAppIdMapping(metricsPath);
@@ -424,7 +429,11 @@ public class GraphiteHistoryWriter {
   }
   
   private String getJobStatus() {
-    return (String)recordCollection.getValue(RecordCategory.CONF_META, new RecordDataKey(JobHistoryKeys.JOB_STATUS.toString()));
+    return (String)recordCollection.getValue(RecordCategory.HISTORY_META, new RecordDataKey(JobHistoryKeys.JOB_STATUS.toString()));
+  }
+  
+  private String getJobPriority() {
+    return (String)recordCollection.getValue(RecordCategory.HISTORY_META, new RecordDataKey(JobHistoryKeys.JOB_PRIORITY.toString()));
   }
 
   private String getOozieActionName() {
@@ -467,7 +476,6 @@ public class GraphiteHistoryWriter {
       if (!first) {
         prefix.append(".");
       }
-
       prefix.append(sanitize(arg));
       first = false;
     }
@@ -479,6 +487,7 @@ public class GraphiteHistoryWriter {
    * @throws UnsupportedEncodingException
    */
   public static String sanitize(String s) {
+    s = StringUtils.isEmpty(s) ? "#null" : s;
     return s.replaceAll(GRAPHITE_KEY_FILTER, "_");
   }
 
