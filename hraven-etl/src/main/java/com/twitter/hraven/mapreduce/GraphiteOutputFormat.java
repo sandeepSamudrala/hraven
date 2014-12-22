@@ -95,9 +95,12 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
     private HTable reverseKeyMappingTable;
 
     private String metricNamingRules;
+
+    private TaskAttemptContext context;
     
 
-    public GraphiteRecordWriter(Configuration hbaseconfig, String host, int port, String prefix, String userFilter, String queueFilter, String excludedComponents, String appInclusionFilter, String appExclusionFilter, String metricNamingRules) throws IOException {
+    public GraphiteRecordWriter(TaskAttemptContext context, Configuration hbaseconfig, String host, int port, String prefix, String userFilter, String queueFilter, String excludedComponents, String appInclusionFilter, String appExclusionFilter, String metricNamingRules) throws IOException {
+      this.context = context;
       this.METRIC_PREFIX = prefix;
       this.userFilter = userFilter;
       this.queueFilter = queueFilter;
@@ -143,7 +146,7 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
 
       try {
         GraphiteHistoryWriter graphiteWriter =
-            new GraphiteHistoryWriter(keyMappingTable, reverseKeyMappingTable, METRIC_PREFIX, service, recordCollection, output, userFilter, queueFilter, excludedComponents, appInclusionFilter, appExclusionFilter, metricNamingRules);
+            new GraphiteHistoryWriter(context, keyMappingTable, reverseKeyMappingTable, METRIC_PREFIX, service, recordCollection, output, userFilter, queueFilter, excludedComponents, appInclusionFilter, appExclusionFilter, metricNamingRules);
         lines = graphiteWriter.write();
       } catch (Exception e) {
         LOG.error("Error generating metrics for graphite", e);
@@ -192,7 +195,7 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
   public RecordWriter<EnumWritable<HravenService>, HravenRecord> getRecordWriter(TaskAttemptContext context)
       throws IOException, InterruptedException {
     Configuration conf = context.getConfiguration();
-    return new GraphiteRecordWriter(HBaseConfiguration.create(conf),
+    return new GraphiteRecordWriter(context, HBaseConfiguration.create(conf),
                                     conf.get(Constants.JOBCONF_GRAPHITE_HOST_KEY, Constants.GRAPHITE_DEFAULT_HOST),
                                     conf.getInt(Constants.JOBCONF_GRAPHITE_PORT_KEY, Constants.GRAPHITE_DEFAULT_PORT),
                                     conf.get(Constants.JOBCONF_GRAPHITE_PREFIX, Constants.GRAPHITE_DEFAULT_PREFIX),
