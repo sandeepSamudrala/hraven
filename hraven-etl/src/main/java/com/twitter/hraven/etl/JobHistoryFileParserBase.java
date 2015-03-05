@@ -53,7 +53,7 @@ public abstract class JobHistoryFileParserBase implements JobHistoryFileParser {
 	 * generates a put that sets the hadoop version for a record
 	 * 
 	 * @param historyFileVersion
-	 * @param jobKeyBytes
+	 * @param jobKey
 	 * 
 	 * @return Put
 	 */
@@ -232,7 +232,7 @@ public abstract class JobHistoryFileParserBase implements JobHistoryFileParser {
   /**
    * calculates the cost of a job in current units
    * jobCost = thisJobMbMillis * computeTco / mbMillisInOneday
-   * @param mb millis, compute tco, memory of the machine
+   * @param mbMillis, compute tco, memory of the machine
    */
   public static Double calculateJobCost(Long mbMillis, Double computeTco, Long machineMemory) {
     if ((machineMemory == 0L) || (computeTco == 0.0)) {

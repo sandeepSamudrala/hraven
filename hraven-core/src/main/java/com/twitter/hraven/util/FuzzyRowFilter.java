@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -73,7 +74,7 @@ public class FuzzyRowFilter extends FilterBase {
 
   // TODO: possible improvement: save which fuzzy row key to use when providing a hint
   @Override
-  public ReturnCode filterKeyValue(KeyValue kv) {
+  public ReturnCode filterKeyValue(Cell kv) {
     byte[] rowKey = kv.getRow();
     // assigning "worst" result first and looking for better options
     SatisfiesCode bestOption = SatisfiesCode.NO_NEXT;
@@ -131,7 +132,6 @@ public class FuzzyRowFilter extends FilterBase {
     return done;
   }
 
-  @Override
   public void write(DataOutput dataOutput) throws IOException {
     dataOutput.writeInt(this.fuzzyKeysData.size());
     for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
@@ -140,7 +140,6 @@ public class FuzzyRowFilter extends FilterBase {
     }
   }
 
-  @Override
   public void readFields(DataInput dataInput) throws IOException {
     int count = dataInput.readInt();
     this.fuzzyKeysData = new ArrayList<Pair<byte[], byte[]>>(count);

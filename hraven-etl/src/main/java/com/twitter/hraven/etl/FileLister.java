@@ -135,8 +135,6 @@ public class FileLister {
    *
    * @param maxFileSize -max #bytes to be stored in an hbase cell
    * @param origList - input list of files to be processed
-   * @param hdfs - filesystem to be looked at
-   * @param inputPath - root dir of the path containing history files
    * @return - pruned array of FileStatus of files to be processed
    */
   static FileStatus[] pruneFileList(long maxFileSize, FileStatus[] origList) {

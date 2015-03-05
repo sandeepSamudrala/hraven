@@ -29,6 +29,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -158,8 +159,11 @@ public class HdfsStatsService {
       for (Result result : scanner) {
         if (result != null && !result.isEmpty()) {
           colCount += result.size();
-          resultSize += result.getWritableSize();
-          rowCount = populateHdfsStats(result, hdfsStats, checkPath, path, starttime, endtime, rowCount);
+          for (Cell c : result.rawCells()) {
+            resultSize += c.getValueLength();
+          }
+          rowCount =
+              populateHdfsStats(result, hdfsStats, checkPath, path, starttime, endtime, rowCount);
           // return if we've already hit the limit
           if (rowCount >= maxCount) {
             break;

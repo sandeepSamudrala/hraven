@@ -19,6 +19,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.TaskInputOutputContext;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -44,6 +46,8 @@ import com.twitter.hraven.util.ByteUtil;
 public class GraphiteHistoryWriter {
 
   private static Log LOG = LogFactory.getLog(GraphiteHistoryWriter.class);
+
+  private static List<NamingRule> RULE_CONFIG;
 
   private final Pattern APPID_PATTERN_OOZIE_LAUNCHER = Pattern.compile(".*oozie:launcher:T=(.*):W=(.*):A=(.*):ID=(.*)");
   private final Pattern APPID_PATTERN_OOZIE_ACTION = Pattern.compile(".*oozie:action:T=(.*):W=(.*):A=(.*):ID=[0-9]{7}-[0-9]{15}-oozie-oozi-W(.*)");
@@ -71,22 +75,37 @@ public class GraphiteHistoryWriter {
 
   private String metricNamingRuleFile;
 
+  private TaskAttemptContext taskContext;
+  
+  public enum Counters {
+    GRAPHITE_SINK,
+    APPS_FILTERED_IN,
+    APPS_FILTERED_OUT,
+    APP_EXCLUDED_COMPS,
+    METRICS_WRITTEN
+  };
+
   /**
    * Writes a single {@link JobHistoryRecord} to the specified {@link HravenService} Passes the
    * large multi record of which this record is a part of, so that we can get other contextual
    * attributes to use in the graphite metric naming scheme
-   * @param graphiteKeyMappingTable 
+   * @param context
+   * @param keyMappingTable
+   * @param reverseKeyMappingTable
    * @param serviceKey
+   * @param recordCollection
    * @param userFilter 
-   * @param doNotExcludeApps 
-   * @param jobRecord
-   * @param multiRecord
+   * @param queueFilter
+   * @param excludedComponents
+   * @param appExclusionFilter
+   * @param metricNamingRuleFile
    * @throws IOException
    * @throws InterruptedException
    */
 
-  public GraphiteHistoryWriter(HTable keyMappingTable, HTable reverseKeyMappingTable, String prefix, HravenService serviceKey,
+  public GraphiteHistoryWriter(TaskAttemptContext context, HTable keyMappingTable, HTable reverseKeyMappingTable, String prefix, HravenService serviceKey,
       JobHistoryRecordCollection recordCollection, StringBuilder sb, String userFilter, String queueFilter, String excludedComponents, String appInclusionFilter, String appExclusionFilter, String metricNamingRuleFile) {
+    this.taskContext = context;
     this.keyMappingTable = keyMappingTable;
     this.reverseKeyMappingTable = reverseKeyMappingTable;
     this.service = serviceKey;
@@ -183,9 +202,14 @@ public class GraphiteHistoryWriter {
     return userTags;
   }
   
-  private List<NamingRule> getRuleConfig (String fsFile, Configuration conf) throws IOException {
-    String configStr = readFsFile(fsFile, conf);
-    return parseRuleConfig(configStr);
+  private List<NamingRule> getRuleConfig () throws IOException {
+    if (GraphiteHistoryWriter.RULE_CONFIG == null) {
+      String configStr = readFsFile(metricNamingRuleFile, new Configuration());
+      GraphiteHistoryWriter.RULE_CONFIG = parseRuleConfig(configStr);
+      LOG.info("Working with metric rule file: " + GraphiteHistoryWriter.RULE_CONFIG);
+    }
+    
+    return GraphiteHistoryWriter.RULE_CONFIG;
   }
   
   public static String readFsFile(String fsFile, Configuration conf) throws IOException {
@@ -235,10 +259,9 @@ public class GraphiteHistoryWriter {
   }
 
   private String getMetricsPath() throws IOException {
-      //TODO: move the initialization part out, so that it happens only once per mapper
       String metricsPath = null;
       
-      String defaultRule = "#path(#cluster,#queue,#user,'all',#status,#jobName)";
+      String defaultRule = "c:#{#cluster}.q:#{#queue}.u:#{#user}.all.s:#{#status}.j:#{#jobName}";
       
       StandardEvaluationContext context = new StandardEvaluationContext();
       Map<String, Object> systemTokens = getSystemTokens();
@@ -259,21 +282,26 @@ public class GraphiteHistoryWriter {
       context.setVariable("tag", userTokens);
       context.setVariable("records", recordCollection);
       
-      List<NamingRule> rules = getRuleConfig(metricNamingRuleFile, new Configuration());
+      List<NamingRule> rules = getRuleConfig();
       
       boolean ruleMatched = false;
       
+      int numRule = 0;
       for (NamingRule rule: rules) {
         Expression filterExp = getParsedExpression(rule.getFilter(), false);
         if (filterExp.getValue(context, Boolean.class)) {
+          incrementCounter("RULE_" + numRule + "_MATCHED", 1);
           String regJobName = recordCollection.getKey().getAppId();
           if (rule.getReplace() != null) {
+            int numReplaceRule = 0;
             for (ReplaceRule replaceRule : rule.getReplace()) {
               Pattern replacePattern = Pattern.compile(replaceRule.getRegex());
               if (replacePattern.matcher(recordCollection.getKey().getAppId()).matches()) {
+                  incrementCounter("RULE_" + numRule + "_REPLACE_" + numReplaceRule + "_MATCHED", 1);
                   regJobName = replacePattern.matcher(recordCollection.getKey().getAppId()).replaceAll(replaceRule.getWith());
                   break;
               }
+              numReplaceRule++;
             }
           }
           context.setVariable("regJobName", regJobName);
@@ -283,16 +311,31 @@ public class GraphiteHistoryWriter {
           ruleMatched = true;
           break;
         }
+        numRule++;
       }
       
       if (!ruleMatched) {
-        ExpressionParser parser = new SpelExpressionParser();
-        Expression exp = parser.parseExpression(defaultRule);
+        incrementCounter("NO_RULE_MATCHED", 1);
+        Expression exp = getParsedExpression(defaultRule, true);
         metricsPath = exp.getValue(context, String.class);
         LOG.warn("Defaulting to default metric path naming rule for app " + recordCollection.getKey().toString());
       }
       
       return metricsPath;
+  }
+  
+  private void incrementCounter(Counters counter) {
+    incrementCounter(counter, 1);
+  }
+  
+  private void incrementCounter(Counters counter, int count) {
+    HadoopCompat.incrementCounter(
+      taskContext.getCounter(Counters.GRAPHITE_SINK.toString(), counter.toString()), count);
+  }
+  
+  private void incrementCounter(String counter, int count) {
+    HadoopCompat.incrementCounter(
+      taskContext.getCounter(Counters.GRAPHITE_SINK.toString(), counter), count);
   }
   
   public int write() throws IOException {
@@ -304,6 +347,8 @@ public class GraphiteHistoryWriter {
     int lineCount = 0;
     
     if (filterApp()) {
+      incrementCounter(Counters.APPS_FILTERED_IN);
+      
       String metricsPath = prefix + "." + getMetricsPath();
       
       try {
@@ -335,6 +380,7 @@ public class GraphiteHistoryWriter {
             if (excludedComponents != null && excludedComponents.contains(comp)) {
               ignoreRecord = true;
               LOG.info("Excluding component '" + jobRecord.getDataKey().toString() + "' of app " + jobRecord.getKey().toString());
+              incrementCounter(Counters.APP_EXCLUDED_COMPS);
               break;
             }
             line.append(".").append(sanitize(comp));
@@ -368,8 +414,11 @@ public class GraphiteHistoryWriter {
         lines.append(metricsPath + ".").append(runTimeKey + " " + (finishTime-launchTime) + " " + timestamp + "\n");
         lineCount++;
       }
+    } else {
+      incrementCounter(Counters.APPS_FILTERED_OUT);
     }
     
+    incrementCounter(Counters.METRICS_WRITTEN, lineCount);
     return lineCount;
   }
 

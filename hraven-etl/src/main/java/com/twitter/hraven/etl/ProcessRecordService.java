@@ -103,7 +103,10 @@ public class ProcessRecordService {
     processRecordTable = new HTable(myHBaseConf,
         Constants.JOB_FILE_PROCESS_TABLE_BYTES);
     this.myHBaseConf = myHBaseConf;
-    fs = FileSystem.get(myHBaseConf);
+      Configuration conf = new Configuration();
+//      conf.set("fs.defaultFS", "hdfs://4SPCG32-DT:8020");
+      conf.set("fs.defaultFS", "hdfs://10.14.119.147:8020");
+    fs = FileSystem.get(conf);
   }
 
   /**

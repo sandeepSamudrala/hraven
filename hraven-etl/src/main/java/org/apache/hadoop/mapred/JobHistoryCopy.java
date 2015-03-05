@@ -55,6 +55,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
 
@@ -284,7 +285,7 @@ public class JobHistoryCopy {
 
           jobHistoryFileMap.put(id, new MovedFileInfo(historyFileDonePath,
               System.currentTimeMillis()));
-          jobTracker.historyFileCopied(id, historyFileDonePath);
+//          jobTracker.historyFileCopied(id, historyFileDonePath);
           
           //purge the job from the cache
           fileManager.purgeJob(id);
@@ -346,7 +347,7 @@ public class JobHistoryCopy {
     jtConf = conf;
 
     // queue and job level security is enabled on the mapreduce cluster or not
-    aclsEnabled = conf.getBoolean(JobConf.MR_ACLS_ENABLED, false);
+    aclsEnabled = conf.getBoolean(MRConfig.MR_ACLS_ENABLED, false);
 
     // initialize the file manager
     fileManager = new JobHistoryFilesManager(conf, jobTracker);
@@ -421,8 +422,7 @@ public class JobHistoryCopy {
     
     /**
      * Logs history meta-info to the history file. This needs to be called once
-     * per history file. 
-     * @param jobId job id, assigned by jobtracker. 
+     * per history file.
      */
     static void logMetaInfo(ArrayList<PrintWriter> writers){
       if (null != writers){
@@ -579,7 +579,7 @@ public class JobHistoryCopy {
    * @param recordType type of log event
    * @param keys type of log event
    * @param values type of log event
-   * @param JobID jobid of the job  
+   * @param id of the job
    */
 
   static void log(ArrayList<PrintWriter> writers, RecordTypes recordType, 
@@ -2154,10 +2154,11 @@ public class JobHistoryCopy {
       return null;
     }
 
-    String taskTrackerName =
-      JobInProgress.convertTrackerNameToHostName(
-        attempt.get(JobHistoryKeys.TRACKER_NAME));
-    return TaskLogServlet.getTaskLogUrl(taskTrackerName, attempt
-        .get(JobHistoryKeys.HTTP_PORT), attempt.get(JobHistoryKeys.TASK_ATTEMPT_ID));
+      return null;
+//    String taskTrackerName =
+//      JobInProgress. convertTrackerNameToHostName(
+//        attempt.get(JobHistoryKeys.TRACKER_NAME));
+//    return TaskLogServlet.getTaskLogUrl(taskTrackerName, attempt
+//        .get(JobHistoryKeys.HTTP_PORT), attempt.get(JobHistoryKeys.TASK_ATTEMPT_ID));
   }
 }

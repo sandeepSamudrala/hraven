@@ -26,6 +26,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -132,13 +133,16 @@ public class AppSummaryService {
       long colCount = 0;
       long resultSize = 0;
       scanner = versionsTable.getScanner(scan);
+
       for (Result result : scanner) {
         if (result != null && !result.isEmpty()) {
           rowCount++;
           colCount += result.size();
-          resultSize += result.getWritableSize();
+          for (Cell c : result.rawCells()) {
+            resultSize += c.getValueLength();
+          }
           AppKey appKey = getNewAppKeyFromResult(result, startTime, endTime);
-          if(appKey != null) {
+          if (appKey != null) {
             newAppsKeys.add(appKey);
           }
           if (newAppsKeys.size() >= maxCount) {

@@ -49,7 +49,8 @@ public class HbaseHistoryWriter {
       Bytes.toBytes(record.getDataValue().toString());
       p.add(family, qualifier, valueBytes);
     } else if (dataKey == JobHistoryKeys.COUNTERS || dataKey == JobHistoryKeys.MAP_COUNTERS
-        || dataKey == JobHistoryKeys.REDUCE_COUNTERS) {
+        || dataKey == JobHistoryKeys.REDUCE_COUNTERS || dataKey == JobHistoryKeys.TOTAL_COUNTERS
+        || dataKey == JobHistoryKeys.TASK_COUNTERS || dataKey.equals(JobHistoryKeys.TASK_ATTEMPT_COUNTERS)) {
 
       String group = record.getDataKey().get(1);
       String counterName = record.getDataKey().get(2);
@@ -88,18 +89,24 @@ public class HbaseHistoryWriter {
       Class clazz = JobHistoryKeys.KEY_TYPES.get(dataKey);
       byte[] valueBytes = null;
 
-      if (Integer.class.equals(clazz)) {
-        valueBytes =
-            (Integer) record.getDataValue() == 0 ? Constants.ZERO_INT_BYTES : Bytes
-                .toBytes((Integer) record.getDataValue());
-      } else if (Long.class.equals(clazz)) {
-        valueBytes =
-            (Long) record.getDataValue() == 0 ? Constants.ZERO_LONG_BYTES : Bytes
-                .toBytes((Long) record.getDataValue());
-      } else {
-        // keep the string representation by default
-        valueBytes = Bytes.toBytes((String) record.getDataValue());
+      try {
+          if (Integer.class.equals(clazz)) {
+            valueBytes =
+                (Integer) record.getDataValue() == 0 ? Constants.ZERO_INT_BYTES : Bytes
+                    .toBytes((Integer) record.getDataValue());
+          } else if (Long.class.equals(clazz)) {
+            valueBytes =
+                (Long) record.getDataValue() == 0 ? Constants.ZERO_LONG_BYTES : Bytes
+                    .toBytes((Long) record.getDataValue());
+          } else {
+            // keep the string representation by default
+            valueBytes = Bytes.toBytes(record.getDataValue().toString());
+          }
+      } catch (Exception e) {
+          LOG.error(String.format("Error serializing dataKey: %s, value: %s",dataKey,record.getDataValue()));
+          valueBytes = Bytes.toBytes(record.getDataValue().toString());
       }
+      
       byte[] qualifier = Bytes.toBytes(dataKey.toString().toLowerCase());
       p.add(family, qualifier, valueBytes);
     }

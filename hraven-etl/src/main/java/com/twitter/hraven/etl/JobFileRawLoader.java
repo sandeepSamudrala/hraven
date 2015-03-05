@@ -150,6 +150,8 @@ public class JobFileRawLoader extends Configured implements Tool {
       ClassNotFoundException, InterruptedException {
 
     Configuration myHBaseConf = HBaseConfiguration.create(getConf());
+
+
     hdfs = FileSystem.get(myHBaseConf);
 
     // Grab input args and allow for -Dxyz style arguments
@@ -242,6 +244,7 @@ public class JobFileRawLoader extends Configured implements Tool {
         ProcessRecord processRecord = processRecords.get(j);
 
         LOG.info("Processing " + processRecord);
+
 
         boolean success = runRawLoaderJob(myHBaseConf,
             processRecord.getProcessFile(), processRecords.size());
