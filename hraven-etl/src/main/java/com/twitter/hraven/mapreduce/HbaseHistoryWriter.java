@@ -105,7 +105,7 @@ public class HbaseHistoryWriter {
       } catch (Exception e) {
           LOG.error(String.format("Error serializing dataKey: %s, value: %s",dataKey,record.getDataValue()));
           valueBytes = Bytes.toBytes(record.getDataValue().toString());
-      }
+          }
       
       byte[] qualifier = Bytes.toBytes(dataKey.toString().toLowerCase());
       p.add(family, qualifier, valueBytes);

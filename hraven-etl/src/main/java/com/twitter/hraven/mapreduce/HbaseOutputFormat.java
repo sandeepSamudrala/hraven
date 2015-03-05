@@ -1,22 +1,32 @@
 package com.twitter.hraven.mapreduce;
 
-import com.twitter.hraven.*;
 import com.twitter.hraven.datasource.JobKeyConverter;
 import com.twitter.hraven.datasource.TaskKeyConverter;
 import com.twitter.hraven.util.EnumWritable;
 import org.apache.hadoop.hbase.client.Mutation;
+import java.io.IOException;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.MultiTableOutputFormat;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.mapreduce.*;
 
-import java.io.IOException;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.OutputCommitter;
+import org.apache.hadoop.mapreduce.OutputFormat;
+import org.apache.hadoop.mapreduce.RecordWriter;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import com.twitter.hraven.Constants;
+import com.twitter.hraven.HravenRecord;
+import com.twitter.hraven.HravenService;
+import com.twitter.hraven.JobHistoryRecordCollection;
+import com.twitter.hraven.JobHistoryRecord;
+import com.twitter.hraven.JobHistoryTaskRecord;
+import com.twitter.hraven.TaskKey;
+import com.twitter.hraven.*;
+import org.apache.hadoop.hbase.client.HTable;
 
 /**
  * @author angad.singh Wrapper around Hbase's {@link MultiTableOutputFormat} Converts
- *         {@link HravenRecords} to Hbase {@link Put}s and writes them to {@link HTable}s
+ *         {@link HravenRecord} to Hbase {@link Put}s and writes them to {@link HTable}s
  *         corresponding to {@link HravenService}
  */
 
@@ -63,7 +73,7 @@ public class HbaseOutputFormat extends OutputFormat<EnumWritable<HravenService>,
 
     /**
      * Split a {@link JobHistoryRecordCollection} into {@link JobHistoryRecord}s and call the
-     * {@link #writeRecord(HravenService, JobHistoryRecord)} method
+     * {@link #writeRecord(HravenService, HravenRecord)}} method
      */
 
     @Override
@@ -95,7 +105,7 @@ public class HbaseOutputFormat extends OutputFormat<EnumWritable<HravenService>,
   }
 
   /**
-   * Wrap around {@link MultiTableOutputFormat}'s {@link MultiTableRecordWriter}
+   * Wrap around {@link MultiTableOutputFormat}'s {@link MultiTableOutputFormat.MultiTableRecordWriter}
    */
   @Override
   public RecordWriter<EnumWritable<HravenService>, HravenRecord> getRecordWriter(TaskAttemptContext context)
