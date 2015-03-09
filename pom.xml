@@ -274,7 +274,7 @@
                 <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
-                <hbase.version>0.98.0.2.1.5.0-695-hadoop2</hbase.version>
+                <hbase.version>0.98.4.2.2.0.0-2041-hadoop2</hbase.version>
                 <hdp.version>2.6.0.2.2.0.0-2041</hdp.version>
                 <hadoop.version>${hdp.version}</hadoop.version>
                 <hadoop.core.version>${hadoop.version}</hadoop.core.version>

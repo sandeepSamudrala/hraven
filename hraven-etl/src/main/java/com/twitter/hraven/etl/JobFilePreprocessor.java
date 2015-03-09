@@ -256,11 +256,7 @@ public class JobFilePreprocessor extends Configured implements Tool {
     CommandLine commandLine = parseArgs(otherArgs);
 
     // Output should be an hdfs path.
-    Configuration conf = new Configuration();
-
-    conf.set("fs.defaultFS", "hdfs://10.14.119.147:8020");
-
-    FileSystem hdfs = FileSystem.get(conf);
+    FileSystem hdfs = FileSystem.get(hbaseConf);
 //    FileSystem hdfs = FileSystem.get(hbaseConf);
 
     // Grab the output path argument
@@ -574,12 +570,6 @@ public class JobFilePreprocessor extends Configured implements Tool {
    */
   public static void main(String[] args) throws Exception {
     int res = ToolRunner.run(new JobFilePreprocessor(), args);
-
-    JobConf conf = new JobConf(JobFilePreprocessor.class);
-    conf.setJobName("preprocessor");
-
-    conf.set("fs.defualt.name", "hdfs://4SPCG32-DT:8020");
-
 
     if (res == 1)
         throw new RuntimeException("Job Failed");
