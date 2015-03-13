@@ -247,7 +247,7 @@ public class GraphiteHistoryWriter {
   
   private Expression getParsedExpression(String exp, boolean template) {
     exp = exp.replaceAll("#conf\\((.*)\\)", "#conf(#records,$1)");
-    exp = exp.replaceAll("#\\{([^.]*)\\}", "#{#sanitize($1)}");
+    exp = exp.replaceAll("#\\{([^.:]*)\\}", "#{#sanitize($1)}");
     
     ExpressionParser parser = new SpelExpressionParser();
     
