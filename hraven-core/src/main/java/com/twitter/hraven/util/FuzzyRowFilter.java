@@ -75,7 +75,7 @@ public class FuzzyRowFilter extends FilterBase {
   // TODO: possible improvement: save which fuzzy row key to use when providing a hint
   @Override
   public ReturnCode filterKeyValue(Cell kv) {
-    byte[] rowKey = kv.getRow();
+    byte[] rowKey = kv.getRowArray();
     // assigning "worst" result first and looking for better options
     SatisfiesCode bestOption = SatisfiesCode.NO_NEXT;
     for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
@@ -101,7 +101,7 @@ public class FuzzyRowFilter extends FilterBase {
 
   @Override
   public KeyValue getNextKeyHint(KeyValue currentKV) {
-    byte[] rowKey = currentKV.getRow();
+    byte[] rowKey = currentKV.getRowArray();
     byte[] nextRowKey = null;
     // Searching for the "smallest" row key that satisfies at least one fuzzy row key
     for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {

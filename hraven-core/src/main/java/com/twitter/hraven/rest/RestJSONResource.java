@@ -21,28 +21,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import javax.ws.rs.DefaultValue;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-
-import com.google.common.base.Predicate;
-import com.google.common.base.Stopwatch;
-import com.sun.jersey.core.util.Base64;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
@@ -51,24 +38,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import com.google.common.base.Predicate;
 import com.google.common.base.Stopwatch;
 import com.sun.jersey.core.util.Base64;
-import com.twitter.hraven.AppSummary;
-import com.twitter.hraven.Cluster;
-import com.twitter.hraven.Constants;
-import com.twitter.hraven.Flow;
-import com.twitter.hraven.HdfsConstants;
-import com.twitter.hraven.HdfsStats;
-import com.twitter.hraven.HravenResponseMetrics;
-import com.twitter.hraven.JobDetails;
-import com.twitter.hraven.JobKey;
-import com.twitter.hraven.TaskDetails;
-import com.twitter.hraven.datasource.AppSummaryService;
-import com.twitter.hraven.datasource.AppVersionService;
-import com.twitter.hraven.datasource.FlowKeyConverter;
-import com.twitter.hraven.datasource.HdfsStatsService;
-import com.twitter.hraven.datasource.JobHistoryService;
-import com.twitter.hraven.datasource.JobKeyConverter;
-import com.twitter.hraven.datasource.ProcessingException;
-import com.twitter.hraven.datasource.VersionInfo;
+import com.twitter.hraven.*;
+import com.twitter.hraven.datasource.*;
 import com.twitter.hraven.util.ByteUtil;
 
 /**
@@ -698,14 +669,14 @@ public class RestJSONResource {
     scan.setFilter(prefixFilter);
 
     HTable keyMappingTable = new HTable(HBASE_CONF, Constants.GRAPHITE_KEY_MAPPING_TABLE_BYTES);
-    keyMappingTable.setAutoFlush(false);
+    keyMappingTable.setAutoFlushTo(false);
     
     ResultScanner scanner = keyMappingTable.getScanner(scan);
     JobKeyConverter jobKeyConv = new JobKeyConverter();
     
     for (Result result : scanner) {
       JobKey currentKey = jobKeyConv.fromBytes(result.getRow());
-      graphiteKeys.put(currentKey.toString(), Bytes.toString(result.getColumn(Constants.INFO_FAM_BYTES, Constants.GRAPHITE_KEY_MAPPING_COLUMN_BYTES).get(0).getValue()));
+      graphiteKeys.put(currentKey.toString(), Bytes.toString(result.getColumnCells(Constants.INFO_FAM_BYTES, Constants.GRAPHITE_KEY_MAPPING_COLUMN_BYTES).get(0).getValueArray()));
       if (graphiteKeys.size() >= limit)
         break;
     }
@@ -726,11 +697,11 @@ public class RestJSONResource {
 
     HTable keyMappingTable =
         new HTable(HBASE_CONF, Constants.GRAPHITE_REVERSE_KEY_MAPPING_TABLE_BYTES);
-    keyMappingTable.setAutoFlush(false);
+    keyMappingTable.setAutoFlushTo(false);
     byte[] value =
         keyMappingTable.get(new Get(Bytes.toBytes(metrixPathPrefix)))
-            .getColumn(Constants.INFO_FAM_BYTES, Constants.GRAPHITE_KEY_MAPPING_COLUMN_BYTES)
-            .get(0).getValue();
+            .getColumnCells(Constants.INFO_FAM_BYTES, Constants.GRAPHITE_KEY_MAPPING_COLUMN_BYTES)
+            .get(0).getValueArray();
     keyMappingTable.close();
     byte[][] splits = ByteUtil.split(value, Constants.SEP_BYTES, 3);
     return Bytes.toString(splits[0]) +  Constants.SEP + Bytes.toString(splits[1]) +  Constants.SEP + Bytes.toString(splits[2]);

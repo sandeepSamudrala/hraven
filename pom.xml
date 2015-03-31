@@ -269,6 +269,7 @@
             </build>
         </profile>
         <profile>
+            <!-- This profile is for hadoop2 and not cdh4. -->
             <id>cdh4</id>
             <activation>
                 <activeByDefault>true</activeByDefault>

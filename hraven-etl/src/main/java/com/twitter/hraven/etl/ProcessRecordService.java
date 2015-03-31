@@ -33,12 +33,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -50,10 +46,6 @@ import org.apache.hadoop.io.SequenceFile.Writer;
 
 import com.twitter.hraven.Constants;
 import com.twitter.hraven.datasource.ProcessingException;
-import com.twitter.hraven.etl.JobFile;
-import com.twitter.hraven.etl.ProcessRecord;
-import com.twitter.hraven.etl.ProcessRecordKey;
-import com.twitter.hraven.etl.ProcessState;
 
 /**
  * Used to store and retrieve {@link ProcessRecord} objects.
@@ -305,35 +297,35 @@ public class ProcessRecordService {
       byte[] row = result.getRow();
       ProcessRecordKey key = keyConv.fromBytes(row);
 
-      KeyValue keyValue = result.getColumnLatest(Constants.INFO_FAM_BYTES,
-          Constants.MIN_MOD_TIME_MILLIS_COLUMN_BYTES);
-      long minModificationTimeMillis = Bytes.toLong(keyValue.getValue());
+      Cell keyValue = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
+                                                 Constants.MIN_MOD_TIME_MILLIS_COLUMN_BYTES);
+      long minModificationTimeMillis = Bytes.toLong(keyValue.getValueArray());
 
-      keyValue = result.getColumnLatest(Constants.INFO_FAM_BYTES,
+      keyValue = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
           Constants.PROCESSED_JOB_FILES_COLUMN_BYTES);
-      int processedJobFiles = Bytes.toInt(keyValue.getValue());
+      int processedJobFiles = Bytes.toInt(keyValue.getValueArray());
 
-      keyValue = result.getColumnLatest(Constants.INFO_FAM_BYTES,
+      keyValue = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
           Constants.PROCESS_FILE_COLUMN_BYTES);
-      String processingDirectory = Bytes.toString(keyValue.getValue());
+      String processingDirectory = Bytes.toString(keyValue.getValueArray());
 
-      keyValue = result.getColumnLatest(Constants.INFO_FAM_BYTES,
+      keyValue = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
           Constants.PROCESSING_STATE_COLUMN_BYTES);
       ProcessState processState = ProcessState.getProcessState(Bytes
-          .toInt(keyValue.getValue()));
+          .toInt(keyValue.getValueArray()));
 
-      keyValue = result.getColumnLatest(Constants.INFO_FAM_BYTES,
+      keyValue = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
           Constants.MIN_JOB_ID_COLUMN_BYTES);
       String minJobId = null;
       if (keyValue != null) {
-        minJobId = Bytes.toString(keyValue.getValue());
+        minJobId = Bytes.toString(keyValue.getValueArray());
       }
 
-      keyValue = result.getColumnLatest(Constants.INFO_FAM_BYTES,
+      keyValue = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
           Constants.MAX_JOB_ID_COLUMN_BYTES);
       String maxJobId = null;
       if (keyValue != null) {
-        maxJobId = Bytes.toString(keyValue.getValue());
+        maxJobId = Bytes.toString(keyValue.getValueArray());
       }
 
       ProcessRecord processRecord = new ProcessRecord(key.getCluster(),

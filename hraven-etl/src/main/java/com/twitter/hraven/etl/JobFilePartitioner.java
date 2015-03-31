@@ -246,7 +246,7 @@ public class JobFilePartitioner extends Configured implements Tool {
     outputPath = new Path(output);
     FileStatus outputFileStatus = hdfs.getFileStatus(outputPath);
 
-    if (!outputFileStatus.isDir()) {
+    if (!outputFileStatus.isDirectory()) {
       throw new IOException("Output is not a directory"
           + outputFileStatus.getPath().getName());
     }
@@ -310,7 +310,7 @@ public class JobFilePartitioner extends Configured implements Tool {
     FileStatus inputFileStatus = hdfs.getFileStatus(inputPath);
 
     // Check if input is a directory
-    if (!inputFileStatus.isDir()) {
+    if (!inputFileStatus.isDirectory()) {
       throw new IOException("Input is not a directory in HDFS: " + input);
     }
 

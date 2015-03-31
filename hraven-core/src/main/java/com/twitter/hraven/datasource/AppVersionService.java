@@ -22,13 +22,8 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.collect.Lists;
@@ -66,9 +61,9 @@ public class AppVersionService {
     List<VersionInfo> versions = Lists.newArrayList();
     Result r = this.versionsTable.get(get);
     if (r != null && !r.isEmpty()) {
-      for (KeyValue kv : r.list()) {
+      for (Cell kv : r.listCells()) {
         versions.add(
-            new VersionInfo(Bytes.toString(kv.getQualifier()), Bytes.toLong(kv.getValue())) );
+            new VersionInfo(Bytes.toString(kv.getQualifierArray()), Bytes.toLong(kv.getValueArray())) );
       }
     }
 
@@ -98,12 +93,12 @@ public class AppVersionService {
     Long ts = 0L;
     Result r = this.versionsTable.get(get);
     if (r != null && !r.isEmpty()) {
-      for (KeyValue kv : r.list()) {
+      for (Cell kv : r.listCells()) {
         ts = 0L;
         try {
-          ts = Bytes.toLong(kv.getValue());
+          ts = Bytes.toLong(kv.getValueArray());
           versions.add(
-              new VersionInfo(Bytes.toString(kv.getQualifier()), ts) );
+              new VersionInfo(Bytes.toString(kv.getQualifierArray()), ts) );
         }
         catch (IllegalArgumentException e1 ) {
           // Bytes.toLong may throw IllegalArgumentException, although unlikely.
