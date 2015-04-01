@@ -357,15 +357,15 @@ public class JobHistoryRawService {
       throw new IllegalArgumentException("Cannot create InputStream from null");
     }
 
-    Cell keyValue = result.getColumnLatestCell(Constants.RAW_FAM_BYTES,
+    Cell cell = result.getColumnLatestCell(Constants.RAW_FAM_BYTES,
                                                Constants.JOBCONF_COL_BYTES);
 
     // Create a jobConf from the raw input
     Configuration jobConf = new Configuration(false);
 
     byte[] jobConfRawBytes = null;
-    if (keyValue != null) {
-      jobConfRawBytes = keyValue.getValueArray();
+    if (cell != null) {
+      jobConfRawBytes = cell.getValueArray();
     }
     if (jobConfRawBytes == null || jobConfRawBytes.length == 0) {
       throw new MissingColumnInResultException(Constants.RAW_FAM_BYTES,
@@ -485,15 +485,15 @@ public class JobHistoryRawService {
           + "a null hbase result");
     }
 
-    Cell keyValue = value.getColumnLatestCell(Constants.INFO_FAM_BYTES,
+    Cell cell = value.getColumnLatestCell(Constants.INFO_FAM_BYTES,
                                               Constants.JOBHISTORY_LAST_MODIFIED_COL_BYTES);
 
-    if (keyValue == null) {
+    if (cell == null) {
       throw new MissingColumnInResultException(Constants.INFO_FAM_BYTES,
           Constants.JOBHISTORY_LAST_MODIFIED_COL_BYTES);
     }
 
-    byte[] lastModTimeBytes = keyValue.getValueArray();
+    byte[] lastModTimeBytes = cell.getValueArray();
     // we try to approximately set the job submit time based on when the job history file
     // was last modified and an average job duration
     long lastModTime = Bytes.toLong(lastModTimeBytes);
@@ -540,16 +540,16 @@ public class JobHistoryRawService {
       throw new IllegalArgumentException("Cannot create InputStream from null");
     }
     
-    Cell keyValue =
+    Cell cell =
         value.getColumnLatestCell(Constants.RAW_FAM_BYTES, Constants.JOBHISTORY_COL_BYTES);
 
     // Could be that there is no conf file (only a history file).
-    if (keyValue == null) {
+    if (cell == null) {
       throw new MissingColumnInResultException(Constants.RAW_FAM_BYTES,
           Constants.JOBHISTORY_COL_BYTES);
     }
 
-    byte[] jobHistoryRaw = keyValue.getValueArray();
+    byte[] jobHistoryRaw = cell.getValueArray();
     return jobHistoryRaw;
   }
 

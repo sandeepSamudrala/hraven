@@ -61,9 +61,9 @@ public class AppVersionService {
     List<VersionInfo> versions = Lists.newArrayList();
     Result r = this.versionsTable.get(get);
     if (r != null && !r.isEmpty()) {
-      for (Cell kv : r.listCells()) {
+      for (Cell cell : r.listCells()) {
         versions.add(
-            new VersionInfo(Bytes.toString(kv.getQualifierArray()), Bytes.toLong(kv.getValueArray())) );
+            new VersionInfo(Bytes.toString(cell.getQualifierArray()), Bytes.toLong(cell.getValueArray())) );
       }
     }
 
@@ -93,12 +93,12 @@ public class AppVersionService {
     Long ts = 0L;
     Result r = this.versionsTable.get(get);
     if (r != null && !r.isEmpty()) {
-      for (Cell kv : r.listCells()) {
+      for (Cell cell : r.listCells()) {
         ts = 0L;
         try {
-          ts = Bytes.toLong(kv.getValueArray());
+          ts = Bytes.toLong(cell.getValueArray());
           versions.add(
-              new VersionInfo(Bytes.toString(kv.getQualifierArray()), ts) );
+              new VersionInfo(Bytes.toString(cell.getQualifierArray()), ts) );
         }
         catch (IllegalArgumentException e1 ) {
           // Bytes.toLong may throw IllegalArgumentException, although unlikely.

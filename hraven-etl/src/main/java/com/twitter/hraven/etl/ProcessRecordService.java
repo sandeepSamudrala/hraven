@@ -297,35 +297,35 @@ public class ProcessRecordService {
       byte[] row = result.getRow();
       ProcessRecordKey key = keyConv.fromBytes(row);
 
-      Cell keyValue = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
+      Cell cell = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
                                                  Constants.MIN_MOD_TIME_MILLIS_COLUMN_BYTES);
-      long minModificationTimeMillis = Bytes.toLong(keyValue.getValueArray());
+      long minModificationTimeMillis = Bytes.toLong(cell.getValueArray());
 
-      keyValue = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
+      cell = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
           Constants.PROCESSED_JOB_FILES_COLUMN_BYTES);
-      int processedJobFiles = Bytes.toInt(keyValue.getValueArray());
+      int processedJobFiles = Bytes.toInt(cell.getValueArray());
 
-      keyValue = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
+      cell = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
           Constants.PROCESS_FILE_COLUMN_BYTES);
-      String processingDirectory = Bytes.toString(keyValue.getValueArray());
+      String processingDirectory = Bytes.toString(cell.getValueArray());
 
-      keyValue = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
+      cell = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
           Constants.PROCESSING_STATE_COLUMN_BYTES);
       ProcessState processState = ProcessState.getProcessState(Bytes
-          .toInt(keyValue.getValueArray()));
+          .toInt(cell.getValueArray()));
 
-      keyValue = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
+      cell = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
           Constants.MIN_JOB_ID_COLUMN_BYTES);
       String minJobId = null;
-      if (keyValue != null) {
-        minJobId = Bytes.toString(keyValue.getValueArray());
+      if (cell != null) {
+        minJobId = Bytes.toString(cell.getValueArray());
       }
 
-      keyValue = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
+      cell = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
           Constants.MAX_JOB_ID_COLUMN_BYTES);
       String maxJobId = null;
-      if (keyValue != null) {
-        maxJobId = Bytes.toString(keyValue.getValueArray());
+      if (cell != null) {
+        maxJobId = Bytes.toString(cell.getValueArray());
       }
 
       ProcessRecord processRecord = new ProcessRecord(key.getCluster(),

@@ -79,8 +79,8 @@ public class FlowQueueService {
     }
     // copy the existing row to the new key
     Put p = new Put(queueKeyConverter.toBytes(newKey));
-    for (Cell kv : result.rawCells()) {
-      p.add(kv.getFamilyArray(), kv.getQualifierArray(), kv.getValueArray());
+    for (Cell cell : result.rawCells()) {
+      p.add(cell.getFamilyArray(), cell.getQualifierArray(), cell.getValueArray());
     }
     flowQueueTable.put(p);
     // delete the old row

@@ -239,14 +239,14 @@ public class JobFileTableMapper extends
        * **/
       
       //3.1: get job history
-      Cell keyValue = value.getColumnLatestCell(Constants.RAW_FAM_BYTES, Constants.JOBHISTORY_COL_BYTES);
+      Cell cell = value.getColumnLatestCell(Constants.RAW_FAM_BYTES, Constants.JOBHISTORY_COL_BYTES);
 
       byte[] historyFileContents = null;
-      if (keyValue == null) {
+      if (cell == null) {
         throw new MissingColumnInResultException(Constants.RAW_FAM_BYTES,
           Constants.JOBHISTORY_COL_BYTES);
       } else {
-        historyFileContents = keyValue.getValueArray();
+        historyFileContents = cell.getValueArray();
       }
       
       //3.2: parse job history
