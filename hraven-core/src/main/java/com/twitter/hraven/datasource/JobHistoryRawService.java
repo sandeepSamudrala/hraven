@@ -27,7 +27,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -42,6 +41,7 @@ import com.twitter.hraven.JobId;
 import com.twitter.hraven.QualifiedJobId;
 import com.twitter.hraven.Range;
 import com.twitter.hraven.util.BatchUtil;
+import com.twitter.hraven.util.CellRecords;
 
 /**
  * Used to store and retrieve {@link ProcessRecord} objects.
@@ -365,7 +365,7 @@ public class JobHistoryRawService {
 
     byte[] jobConfRawBytes = null;
     if (cell != null) {
-      jobConfRawBytes = cell.getValueArray();
+      jobConfRawBytes = CellRecords.getValueBytes(cell);
     }
     if (jobConfRawBytes == null || jobConfRawBytes.length == 0) {
       throw new MissingColumnInResultException(Constants.RAW_FAM_BYTES,
@@ -493,10 +493,9 @@ public class JobHistoryRawService {
           Constants.JOBHISTORY_LAST_MODIFIED_COL_BYTES);
     }
 
-    byte[] lastModTimeBytes = cell.getValueArray();
     // we try to approximately set the job submit time based on when the job history file
     // was last modified and an average job duration
-    long lastModTime = Bytes.toLong(lastModTimeBytes);
+    long lastModTime = CellRecords.getValueLong(cell);
     long jobSubmitTimeMillis = lastModTime - Constants.AVERGAE_JOB_DURATION;
     LOG.debug("Approximate job submit time is " + jobSubmitTimeMillis + " based on " + lastModTime);
     return jobSubmitTimeMillis;
@@ -517,7 +516,7 @@ public class JobHistoryRawService {
 
   /**
    * Flags a job's RAW record for reprocessing
-   * 
+   *
    * @param jobId
    */
   public void markJobForReprocesssing(QualifiedJobId jobId) throws IOException {
@@ -549,7 +548,7 @@ public class JobHistoryRawService {
           Constants.JOBHISTORY_COL_BYTES);
     }
 
-    byte[] jobHistoryRaw = cell.getValueArray();
+    byte[] jobHistoryRaw = CellRecords.getValueBytes(cell);
     return jobHistoryRaw;
   }
 

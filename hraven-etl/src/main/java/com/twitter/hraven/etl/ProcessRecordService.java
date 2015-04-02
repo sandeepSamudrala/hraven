@@ -46,6 +46,7 @@ import org.apache.hadoop.io.SequenceFile.Writer;
 
 import com.twitter.hraven.Constants;
 import com.twitter.hraven.datasource.ProcessingException;
+import com.twitter.hraven.util.CellRecords;
 
 /**
  * Used to store and retrieve {@link ProcessRecord} objects.
@@ -299,33 +300,32 @@ public class ProcessRecordService {
 
       Cell cell = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
                                                  Constants.MIN_MOD_TIME_MILLIS_COLUMN_BYTES);
-      long minModificationTimeMillis = Bytes.toLong(cell.getValueArray());
+      long minModificationTimeMillis = CellRecords.getValueLong(cell);
 
       cell = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
           Constants.PROCESSED_JOB_FILES_COLUMN_BYTES);
-      int processedJobFiles = Bytes.toInt(cell.getValueArray());
+      int processedJobFiles = CellRecords.getValueInt(cell);
 
       cell = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
           Constants.PROCESS_FILE_COLUMN_BYTES);
-      String processingDirectory = Bytes.toString(cell.getValueArray());
+      String processingDirectory = CellRecords.getValueString(cell);
 
       cell = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
           Constants.PROCESSING_STATE_COLUMN_BYTES);
-      ProcessState processState = ProcessState.getProcessState(Bytes
-          .toInt(cell.getValueArray()));
+      ProcessState processState = ProcessState.getProcessState(CellRecords.getValueInt(cell));
 
       cell = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
           Constants.MIN_JOB_ID_COLUMN_BYTES);
       String minJobId = null;
       if (cell != null) {
-        minJobId = Bytes.toString(cell.getValueArray());
+        minJobId = CellRecords.getValueString(cell);
       }
 
       cell = result.getColumnLatestCell(Constants.INFO_FAM_BYTES,
           Constants.MAX_JOB_ID_COLUMN_BYTES);
       String maxJobId = null;
       if (cell != null) {
-        maxJobId = Bytes.toString(cell.getValueArray());
+        maxJobId = CellRecords.getValueString(cell);
       }
 
       ProcessRecord processRecord = new ProcessRecord(key.getCluster(),

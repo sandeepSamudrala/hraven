@@ -31,6 +31,7 @@ import com.twitter.hraven.FlowKey;
 import com.twitter.hraven.FlowQueueKey;
 import com.twitter.hraven.rest.PaginatedResult;
 import com.twitter.hraven.util.ByteUtil;
+import com.twitter.hraven.util.CellRecords;
 
 /**
  */
@@ -80,7 +81,7 @@ public class FlowQueueService {
     // copy the existing row to the new key
     Put p = new Put(queueKeyConverter.toBytes(newKey));
     for (Cell cell : result.rawCells()) {
-      p.add(cell.getFamilyArray(), cell.getQualifierArray(), cell.getValueArray());
+      p.add(CellRecords.getFamilyBytes(cell), CellRecords.getQualifierBytes(cell), CellRecords.getValueBytes(cell));
     }
     flowQueueTable.put(p);
     // delete the old row

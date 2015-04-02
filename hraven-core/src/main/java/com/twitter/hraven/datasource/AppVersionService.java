@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.collect.Lists;
 import com.twitter.hraven.Constants;
+import com.twitter.hraven.util.CellRecords;
 
 /**
  * Reads and writes information about the mapping of application IDs
@@ -63,7 +64,7 @@ public class AppVersionService {
     if (r != null && !r.isEmpty()) {
       for (Cell cell : r.listCells()) {
         versions.add(
-            new VersionInfo(Bytes.toString(cell.getQualifierArray()), Bytes.toLong(cell.getValueArray())) );
+            new VersionInfo(CellRecords.getQualifierString(cell), CellRecords.getValueLong(cell)));
       }
     }
 
@@ -96,9 +97,9 @@ public class AppVersionService {
       for (Cell cell : r.listCells()) {
         ts = 0L;
         try {
-          ts = Bytes.toLong(cell.getValueArray());
+          ts=CellRecords.getValueLong(cell);
           versions.add(
-              new VersionInfo(Bytes.toString(cell.getQualifierArray()), ts) );
+              new VersionInfo(CellRecords.getQualifierString(cell), ts) );
         }
         catch (IllegalArgumentException e1 ) {
           // Bytes.toLong may throw IllegalArgumentException, although unlikely.

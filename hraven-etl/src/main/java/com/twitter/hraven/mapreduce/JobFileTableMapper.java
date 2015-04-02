@@ -44,6 +44,7 @@ import com.google.common.collect.Collections2;
 import com.twitter.hraven.*;
 import com.twitter.hraven.datasource.*;
 import com.twitter.hraven.etl.*;
+import com.twitter.hraven.util.CellRecords;
 import com.twitter.hraven.util.EnumWritable;
 
 /**
@@ -246,7 +247,7 @@ public class JobFileTableMapper extends
         throw new MissingColumnInResultException(Constants.RAW_FAM_BYTES,
           Constants.JOBHISTORY_COL_BYTES);
       } else {
-        historyFileContents = cell.getValueArray();
+        historyFileContents = CellRecords.getValueBytes(cell);
       }
       
       //3.2: parse job history
