@@ -22,17 +22,13 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.collect.Lists;
 import com.twitter.hraven.Constants;
+import com.twitter.hraven.util.CellRecords;
 
 /**
  * Reads and writes information about the mapping of application IDs
@@ -66,9 +62,9 @@ public class AppVersionService {
     List<VersionInfo> versions = Lists.newArrayList();
     Result r = this.versionsTable.get(get);
     if (r != null && !r.isEmpty()) {
-      for (KeyValue kv : r.list()) {
+      for (Cell cell : r.listCells()) {
         versions.add(
-            new VersionInfo(Bytes.toString(kv.getQualifier()), Bytes.toLong(kv.getValue())) );
+            new VersionInfo(CellRecords.getQualifierString(cell), CellRecords.getValueLong(cell)));
       }
     }
 
@@ -98,12 +94,12 @@ public class AppVersionService {
     Long ts = 0L;
     Result r = this.versionsTable.get(get);
     if (r != null && !r.isEmpty()) {
-      for (KeyValue kv : r.list()) {
+      for (Cell cell : r.listCells()) {
         ts = 0L;
         try {
-          ts = Bytes.toLong(kv.getValue());
+          ts=CellRecords.getValueLong(cell);
           versions.add(
-              new VersionInfo(Bytes.toString(kv.getQualifier()), ts) );
+              new VersionInfo(CellRecords.getQualifierString(cell), ts) );
         }
         catch (IllegalArgumentException e1 ) {
           // Bytes.toLong may throw IllegalArgumentException, although unlikely.

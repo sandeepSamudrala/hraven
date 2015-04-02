@@ -57,7 +57,7 @@ public class FileLister {
     // get all the files and dirs in the current dir
     FileStatus allFiles[] = hdfs.listStatus(inputPath);
     for (FileStatus aFile: allFiles) {
-      if (aFile.isDir()) {
+      if (aFile.isDirectory()) {
         //recurse here
         traverseDirs(fileStatusesList, hdfs, aFile.getPath(), jobFileModifiedRangePathFilter);
       }

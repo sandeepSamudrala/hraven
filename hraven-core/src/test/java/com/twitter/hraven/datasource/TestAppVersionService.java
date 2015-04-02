@@ -15,10 +15,10 @@ limitations under the License.
 */
 package com.twitter.hraven.datasource;
 
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.HashSet;
 import java.util.List;
@@ -34,8 +34,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.twitter.hraven.Constants;
-import com.twitter.hraven.datasource.AppVersionService;
-import com.twitter.hraven.datasource.VersionInfo;
 
 /**
  * Test class for {@link AppVersionService}
@@ -72,7 +70,7 @@ public class TestAppVersionService {
       Result r = versionTable.get(new Get(appRow));
       assertNotNull(r);
       // should have 1 version
-      assertEquals(r.list().size(), 1);
+      assertEquals(r.listCells().size(), 1);
       assertArrayEquals(
           r.getValue(Constants.INFO_FAM_BYTES, Bytes.toBytes("v1")),
           Bytes.toBytes(1L));
@@ -80,7 +78,7 @@ public class TestAppVersionService {
       service.addVersion(cluster, user, appId, "v2", 10);
       r = versionTable.get(new Get(appRow));
       assertNotNull(r);
-      assertEquals(r.list().size(), 2);
+      assertEquals(r.listCells().size(), 2);
       assertArrayEquals(
           r.getValue(Constants.INFO_FAM_BYTES, Bytes.toBytes("v1")),
           Bytes.toBytes(1L));
@@ -92,7 +90,7 @@ public class TestAppVersionService {
       service.addVersion(cluster, user, appId, "v2", 5);
       r = versionTable.get(new Get(appRow));
       assertNotNull(r);
-      assertEquals(r.list().size(), 2);
+      assertEquals(r.listCells().size(), 2);
       assertArrayEquals(
           r.getValue(Constants.INFO_FAM_BYTES, Bytes.toBytes("v2")),
           Bytes.toBytes(5L));
@@ -101,7 +99,7 @@ public class TestAppVersionService {
       service.addVersion(cluster, user, appId, "v1", 11);
       r = versionTable.get(new Get(appRow));
       assertNotNull(r);
-      assertEquals(r.list().size(), 2);
+      assertEquals(r.listCells().size(), 2);
       assertArrayEquals(
           r.getValue(Constants.INFO_FAM_BYTES, Bytes.toBytes("v1")),
           Bytes.toBytes(1L));

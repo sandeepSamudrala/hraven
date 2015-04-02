@@ -19,15 +19,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
+import org.apache.commons.cli.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -39,7 +32,6 @@ import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.io.SequenceFile.Writer;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -48,11 +40,7 @@ import org.apache.log4j.Logger;
 
 import com.twitter.hraven.Constants;
 import com.twitter.hraven.datasource.ProcessingException;
-import com.twitter.hraven.etl.ProcessRecordService;
 import com.twitter.hraven.util.BatchUtil;
-import com.twitter.hraven.etl.FileLister;
-import com.twitter.hraven.etl.JobFileModifiedRangeSubstringPathFilter;
-import sun.text.resources.FormatData_iw_IL;
 
 /**
  * Command line tool that can be run on a periodic basis (like daily, hourly, or
@@ -328,7 +316,7 @@ public class JobFilePreprocessor extends Configured implements Tool {
     Path baseInputPath = new Path(baseinput);
     FileStatus baseInputFileStatus = hdfs.getFileStatus(baseInputPath);
 
-    if (!baseInputFileStatus.isDir()) {
+    if (!baseInputFileStatus.isDirectory()) {
       throw new IOException("Base input is not a directory"
           + baseInputFileStatus.getPath().getName());
     }

@@ -110,10 +110,10 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
       this.metricNamingRules = metricNamingRules;
       
       keyMappingTable = new HTable(hbaseconfig, Constants.GRAPHITE_KEY_MAPPING_TABLE_BYTES);
-      keyMappingTable.setAutoFlush(false);
+      keyMappingTable.setAutoFlushTo(false);
 
       reverseKeyMappingTable = new HTable(hbaseconfig, Constants.GRAPHITE_REVERSE_KEY_MAPPING_TABLE_BYTES);
-      reverseKeyMappingTable.setAutoFlush(false);
+      reverseKeyMappingTable.setAutoFlushTo(false);
 
       try {
         // Open an connection to Graphite server.

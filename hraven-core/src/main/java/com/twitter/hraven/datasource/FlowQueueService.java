@@ -15,32 +15,23 @@ limitations under the License.
 */
 package com.twitter.hraven.datasource;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.filter.*;
+import org.apache.hadoop.hbase.util.Bytes;
+
 import com.twitter.hraven.Constants;
 import com.twitter.hraven.Flow;
 import com.twitter.hraven.FlowKey;
 import com.twitter.hraven.FlowQueueKey;
 import com.twitter.hraven.rest.PaginatedResult;
 import com.twitter.hraven.util.ByteUtil;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.filter.CompareFilter;
-import org.apache.hadoop.hbase.filter.FilterList;
-import org.apache.hadoop.hbase.filter.PrefixFilter;
-import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
-import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.util.Bytes;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import com.twitter.hraven.util.CellRecords;
 
 /**
  */
@@ -89,8 +80,8 @@ public class FlowQueueService {
     }
     // copy the existing row to the new key
     Put p = new Put(queueKeyConverter.toBytes(newKey));
-    for (KeyValue kv : result.raw()) {
-      p.add(kv.getFamily(), kv.getQualifier(), kv.getValue());
+    for (Cell cell : result.rawCells()) {
+      p.add(CellRecords.getFamilyBytes(cell), CellRecords.getQualifierBytes(cell), CellRecords.getValueBytes(cell));
     }
     flowQueueTable.put(p);
     // delete the old row

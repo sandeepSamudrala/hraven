@@ -15,11 +15,13 @@ limitations under the License.
 */
 package com.twitter.hraven.datasource;
 
-import com.twitter.hraven.Flow;
-import com.twitter.hraven.FlowQueueKey;
-import com.twitter.hraven.datasource.FlowQueueService;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
-import com.twitter.hraven.rest.PaginatedResult;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -27,9 +29,9 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.List;
-
-import static org.junit.Assert.*;
+import com.twitter.hraven.Flow;
+import com.twitter.hraven.FlowQueueKey;
+import com.twitter.hraven.rest.PaginatedResult;
 
 /**
  */
@@ -83,6 +85,8 @@ public class TestFlowQueueService {
     FlowQueueKey newKey1 = new FlowQueueKey(key1.getCluster(), Flow.Status.SUCCEEDED,
         key1.getTimestamp(), key1.getFlowId());
     service.moveFlow(key1, newKey1);
+      System.out.println("key1 = " + key1);
+      System.out.println("newkey1 = " + newKey1);
     FlowQueueKey newKey2 = new FlowQueueKey(key2.getCluster(), Flow.Status.SUCCEEDED,
         key2.getTimestamp(), key2.getFlowId());
     service.moveFlow(key2, newKey2);

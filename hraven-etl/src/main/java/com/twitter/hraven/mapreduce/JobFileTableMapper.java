@@ -31,7 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -41,31 +41,10 @@ import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
-import com.twitter.hraven.Constants;
-import com.twitter.hraven.HravenRecord;
-import com.twitter.hraven.HravenService;
-import com.twitter.hraven.JobDesc;
-import com.twitter.hraven.JobDescFactory;
-import com.twitter.hraven.JobHistoryRecordCollection;
-import com.twitter.hraven.JobHistoryRecord;
-import com.twitter.hraven.JobHistoryTaskRecord;
-import com.twitter.hraven.JobKey;
-import com.twitter.hraven.QualifiedJobId;
-import com.twitter.hraven.RecordCategory;
-import com.twitter.hraven.RecordDataKey;
-import com.twitter.hraven.datasource.AppVersionService;
-import com.twitter.hraven.datasource.JobHistoryByIdService;
-import com.twitter.hraven.datasource.JobHistoryRawService;
-import com.twitter.hraven.datasource.JobHistoryService;
-import com.twitter.hraven.datasource.JobKeyConverter;
-import com.twitter.hraven.datasource.MissingColumnInResultException;
-import com.twitter.hraven.datasource.ProcessingException;
-import com.twitter.hraven.datasource.RowKeyParseException;
-import com.twitter.hraven.etl.JobHistoryFileParser;
-import com.twitter.hraven.etl.JobHistoryFileParserBase;
-import com.twitter.hraven.etl.JobHistoryFileParserFactory;
-import com.twitter.hraven.etl.ProcessRecordService;
-import com.twitter.hraven.etl.Sink;
+import com.twitter.hraven.*;
+import com.twitter.hraven.datasource.*;
+import com.twitter.hraven.etl.*;
+import com.twitter.hraven.util.CellRecords;
 import com.twitter.hraven.util.EnumWritable;
 
 /**
@@ -261,15 +240,14 @@ public class JobFileTableMapper extends
        * **/
       
       //3.1: get job history
-      KeyValue keyValue = value.getColumnLatest(Constants.RAW_FAM_BYTES,
-       Constants.JOBHISTORY_COL_BYTES);
+      Cell cell = value.getColumnLatestCell(Constants.RAW_FAM_BYTES, Constants.JOBHISTORY_COL_BYTES);
 
       byte[] historyFileContents = null;
-      if (keyValue == null) {
+      if (cell == null) {
         throw new MissingColumnInResultException(Constants.RAW_FAM_BYTES,
           Constants.JOBHISTORY_COL_BYTES);
       } else {
-        historyFileContents = keyValue.getValue();
+        historyFileContents = CellRecords.getValueBytes(cell);
       }
       
       //3.2: parse job history
