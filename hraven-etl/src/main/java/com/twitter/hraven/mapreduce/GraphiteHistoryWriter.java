@@ -350,6 +350,8 @@ public class GraphiteHistoryWriter {
       incrementCounter(Counters.APPS_FILTERED_IN);
       
       String metricsPath = prefix + "." + getMetricsPath();
+
+      LOG.info("Sending metrics for: "+ metricsPath);
       
       try {
         storeAppIdMapping(metricsPath);

@@ -66,7 +66,9 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
   /** hadoop2 JobState enum:
    * NEW, INITED, RUNNING, SUCCEEDED, FAILED, KILL_WAIT, KILLED, ERROR
    */
-  public static final String JOB_STATUS_SUCCEEDED = "SUCCEEDED";
+  public static final String JOB_STATUS_SUCCESS = "SUCCESS";
+  public static final String JOB_STATUS_FAILED = "FAILED";
+  public static final String JOB_STATUS_KILLED = "KILLED";
 
   /** explicitly initializing map millis and
    * reduce millis in case it's not found
@@ -132,6 +134,8 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
     JobQueueChange("JOB_QUEUE_CHANGED"),
     JobSubmitted("JOB_SUBMITTED"),
     JobUnsuccessfulCompletion("JOB_KILLED","JOB_FAILED"),
+    JobKilled("JOB_KILLED"),
+    JobFailed("JOB_FAILED"),
     MapAttemptFinished("MAP_ATTEMPT_FINISHED"),
     ReduceAttemptFinished("REDUCE_ATTEMPT_FINISHED"),
     TaskAttemptFinished("CLEANUP_ATTEMPT_FINISHED"),
@@ -421,16 +425,19 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
       processCounters(eventDetails, dataKey);
     } else {
       String type = fieldTypes.get(recType).get(dataKey);
-      if (type.equalsIgnoreCase(TYPE_STRING)) {
-        // look for job status
-        if (JobHistoryKeys.JOB_STATUS.toString().equals(
-          JobHistoryKeys.HADOOP2_TO_HADOOP1_MAPPING.get(dataKey))) {
+        if (type.equalsIgnoreCase(TYPE_STRING)) {
+            // look for job status
           // store it only if it's one of the terminal state events
-          if ((recType.equals(Hadoop2RecordType.JobFinished))
-              || (recType.equals(Hadoop2RecordType.JobUnsuccessfulCompletion))) {
-            this.jobStatus = eventDetails.getString(dataKey);
-          }
-        } else {
+          if (recType.equals(Hadoop2RecordType.JobFinished)) {
+            this.jobStatus = JOB_STATUS_SUCCESS;
+              System.out.println(this.jobStatus);
+        } else if (recType.equals(Hadoop2RecordType.JobFailed)) {
+              this.jobStatus = JOB_STATUS_FAILED;
+              System.out.println(this.jobStatus);
+          } else if (recType.equals(Hadoop2RecordType.JobKilled)) {
+              this.jobStatus = JOB_STATUS_KILLED;
+              System.out.println(this.jobStatus);
+          } else {
           String value = eventDetails.getString(dataKey);
           populateRecord(dataKey, value, adder);
         }
@@ -500,7 +507,9 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
     case JobFinished:
       // this setting is needed since the job history file is missing
       // the jobStatus field in the JOB_FINISHED event
-      this.jobStatus = JOB_STATUS_SUCCEEDED;
+      this.jobStatus = JOB_STATUS_SUCCESS;
+    case JobFailed:
+    case JobKilled:
     case JobInfoChange:
     case JobInited:
     case JobPriorityChange:
