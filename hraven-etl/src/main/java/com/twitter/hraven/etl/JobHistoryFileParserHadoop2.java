@@ -8,12 +8,10 @@
  */
 package com.twitter.hraven.etl;
 
-import com.google.common.collect.Maps;
-import com.twitter.hraven.*;
-import com.twitter.hraven.datasource.JobKeyConverter;
-import com.twitter.hraven.datasource.ProcessingException;
-import com.twitter.hraven.datasource.TaskKeyConverter;
-import com.twitter.hraven.util.ByteArrayWrapper;
+import java.io.EOFException;
+import java.io.IOException;
+import java.util.*;
+
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
@@ -30,9 +28,12 @@ import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 
-import java.io.EOFException;
-import java.io.IOException;
-import java.util.*;
+import com.google.common.collect.Maps;
+import com.twitter.hraven.*;
+import com.twitter.hraven.datasource.JobKeyConverter;
+import com.twitter.hraven.datasource.ProcessingException;
+import com.twitter.hraven.datasource.TaskKeyConverter;
+import com.twitter.hraven.util.ByteArrayWrapper;
 
 /**
  * Deal with JobHistory file parsing for job history files which are generated after MAPREDUCE-1016
@@ -66,7 +67,7 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
   /** hadoop2 JobState enum:
    * NEW, INITED, RUNNING, SUCCEEDED, FAILED, KILL_WAIT, KILLED, ERROR
    */
-  public static final String JOB_STATUS_SUCCESS = "SUCCESS";
+  public static final String JOB_STATUS_SUCCEEDED = "SUCCEEDED";
 
   /** explicitly initializing map millis and
    * reduce millis in case it's not found
@@ -425,7 +426,7 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
             // look for job status
           // store it only if it's one of the terminal state events
           if (recType.equals(Hadoop2RecordType.JobFinished)) {
-            this.jobStatus = JOB_STATUS_SUCCESS;
+            this.jobStatus = JOB_STATUS_SUCCEEDED;
 //              System.out.println(this.jobStatus);
           } else if (recType.equals(Hadoop2RecordType.JobUnsuccessfulCompletion)) {
               this.jobStatus = eventDetails.getString("jobStatus");
@@ -500,7 +501,7 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
     case JobFinished:
       // this setting is needed since the job history file is missing
       // the jobStatus field in the JOB_FINISHED event
-      this.jobStatus = JOB_STATUS_SUCCESS;
+      this.jobStatus = JOB_STATUS_SUCCEEDED;
     case JobInfoChange:
     case JobInited:
     case JobPriorityChange:

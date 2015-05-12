@@ -77,7 +77,7 @@ public class TestJobHistoryFileParserHadoop2 {
             JobHistoryKeys.JOB_STATUS.toString().toLowerCase()));
     
     assertNotNull(statusRecord);
-    assertEquals((String)statusRecord, JobHistoryFileParserHadoop2.JOB_STATUS_SUCCESS);
+    assertEquals((String)statusRecord, JobHistoryFileParserHadoop2.JOB_STATUS_SUCCEEDED);
 
     List<JobHistoryTaskRecord> taskRecords = (List<JobHistoryTaskRecord>) historyFileParser.getTaskRecords();
     assertEquals(382, taskRecords.size());
