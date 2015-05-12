@@ -36,7 +36,6 @@ public class TestJobHistoryFileParserHadoop2 {
   public void testCreateJobHistoryFileParserCorrectCreation() throws IOException {
 
     final String JOB_HISTORY_FILE_NAME =
-//        "src/test/resources/killed.jhist";
         "src/test/resources/job_1329348432655_0001-1329348443227-user-Sleep+job-1329348468601-10-1-SUCCEEDED-default.jhist";
 
     File jobHistoryfile = new File(JOB_HISTORY_FILE_NAME);
