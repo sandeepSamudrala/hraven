@@ -480,7 +480,11 @@ public class GraphiteHistoryWriter {
   }
   
   private String getJobStatus() {
-    return (String)recordCollection.getValue(RecordCategory.HISTORY_META, new RecordDataKey(JobHistoryKeys.JOB_STATUS.toString()));
+      String jobStatus = (String) recordCollection.getValue(RecordCategory.HISTORY_META, new RecordDataKey(JobHistoryKeys.JOB_STATUS.toString()));
+      if (jobStatus == null) {
+          jobStatus = (String) recordCollection.getValue(RecordCategory.HISTORY_META, new RecordDataKey("job_status"));
+      }
+      return jobStatus;
   }
   
   private String getJobPriority() {

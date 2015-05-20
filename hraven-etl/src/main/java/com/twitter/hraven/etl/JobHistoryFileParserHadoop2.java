@@ -67,7 +67,7 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
   /** hadoop2 JobState enum:
    * NEW, INITED, RUNNING, SUCCEEDED, FAILED, KILL_WAIT, KILLED, ERROR
    */
-  public static final String JOB_STATUS_SUCCEEDED = "SUCCEEDED";
+  public static final String JOB_STATUS_SUCCESS = "SUCCESS";
 
   /** explicitly initializing map millis and
    * reduce millis in case it's not found
@@ -426,7 +426,7 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
             // look for job status
           // store it only if it's one of the terminal state events
           if (recType.equals(Hadoop2RecordType.JobFinished)) {
-            this.jobStatus = JOB_STATUS_SUCCEEDED;
+            this.jobStatus = JOB_STATUS_SUCCESS;
 //              System.out.println(this.jobStatus);
           } else if (recType.equals(Hadoop2RecordType.JobUnsuccessfulCompletion)) {
               this.jobStatus = eventDetails.getString("jobStatus");
@@ -501,7 +501,7 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
     case JobFinished:
       // this setting is needed since the job history file is missing
       // the jobStatus field in the JOB_FINISHED event
-      this.jobStatus = JOB_STATUS_SUCCEEDED;
+      this.jobStatus = JOB_STATUS_SUCCESS;
     case JobInfoChange:
     case JobInited:
     case JobPriorityChange:
