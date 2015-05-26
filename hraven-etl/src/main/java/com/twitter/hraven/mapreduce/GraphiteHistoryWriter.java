@@ -351,6 +351,7 @@ public class GraphiteHistoryWriter {
       
       String metricsPath = prefix + "." + getMetricsPath();
       
+      LOG.info("Sending metrics for: "+ metricsPath);
       try {
         storeAppIdMapping(metricsPath);
       } catch (IOException e) {

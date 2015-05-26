@@ -1,5 +1,8 @@
 package com.twitter.hraven.mapreduce;
 
+import static com.twitter.hraven.mapreduce.GraphiteHistoryWriter.readFsFile;
+
+import java.io.FileReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -11,6 +14,8 @@ import java.io.Writer;
 import java.net.Socket;
 import java.net.URLEncoder;
 import java.util.regex.Pattern;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -18,19 +23,15 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.OutputCommitter;
-import org.apache.hadoop.mapreduce.OutputFormat;
-import org.apache.hadoop.mapreduce.RecordWriter;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.*;
+import org.codehaus.jackson.map.ObjectMapper;
 
-import com.twitter.hraven.Constants;
-import com.twitter.hraven.HravenRecord;
-import com.twitter.hraven.HravenService;
-import com.twitter.hraven.JobHistoryRecordCollection;
-import com.twitter.hraven.JobHistoryRecord;
-import com.twitter.hraven.JobKey;
-import com.twitter.hraven.RecordCategory;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.reflect.TypeToken;
+import com.twitter.hraven.*;
 import com.twitter.hraven.util.EnumWritable;
 
 /**
@@ -143,10 +144,13 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
 
       StringBuilder output = new StringBuilder();
       int lines = 0;
+        // BEGIN
+        if(null == context.getConfiguration().get("hraven.multiple.config.files")) {
 
       try {
         GraphiteHistoryWriter graphiteWriter =
-            new GraphiteHistoryWriter(context, keyMappingTable, reverseKeyMappingTable, METRIC_PREFIX, service, recordCollection, output, userFilter, queueFilter, excludedComponents, appInclusionFilter, appExclusionFilter, metricNamingRules);
+                    new GraphiteHistoryWriter(context, keyMappingTable, reverseKeyMappingTable, METRIC_PREFIX, service, recordCollection, output, userFilter,
+                                              queueFilter, excludedComponents, appInclusionFilter, appExclusionFilter, metricNamingRules);
         lines = graphiteWriter.write();
       } catch (Exception e) {
         LOG.error("Error generating metrics for graphite", e);
@@ -163,6 +167,50 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
           throw new IOException(e);
         }  
       }
+        } else {
+            String multipleConfigInput = context.getConfiguration().get("hraven.multiple.config.files");
+            String[] multipleConfigs = multipleConfigInput.split(",");
+            for (String config : multipleConfigs) {
+                String configStr = readFsFile(config, new Configuration());
+                HashMap<String,String> configMap = new Gson().fromJson(configStr.toString(), new TypeToken<HashMap<String, String>>(){}.getType());
+                if(configMap.containsKey(Constants.JOBCONF_GRAPHITE_PREFIX))
+                    METRIC_PREFIX = configMap.get(Constants.JOBCONF_GRAPHITE_PREFIX);
+                if(configMap.containsKey(Constants.JOBCONF_GRAPHITE_USER_FILTER))
+                    userFilter = configMap.get(Constants.JOBCONF_GRAPHITE_USER_FILTER);
+                if(configMap.containsKey(Constants.JOBCONF_GRAPHITE_QUEUE_FILTER))
+                    queueFilter = configMap.get(Constants.JOBCONF_GRAPHITE_QUEUE_FILTER);
+                if(configMap.containsKey(Constants.JOBCONF_GRAPHITE_EXCLUDED_COMPONENTS))
+                    excludedComponents = configMap.get(Constants.JOBCONF_GRAPHITE_EXCLUDED_COMPONENTS);
+                if(configMap.containsKey(Constants.JOBCONF_GRAPHITE_INCLUDE_APPS))
+                    appInclusionFilter = configMap.get(Constants.JOBCONF_GRAPHITE_INCLUDE_APPS);
+                if(configMap.containsKey(Constants.JOBCONF_GRAPHITE_EXCLUDE_APPS))
+                    appExclusionFilter = configMap.get(Constants.JOBCONF_GRAPHITE_EXCLUDE_APPS);
+                if(configMap.containsKey(Constants.JOBCONF_GRAPHITE_NAMING_RULE_CONFIG))
+                    metricNamingRules = configMap.get(Constants.JOBCONF_GRAPHITE_NAMING_RULE_CONFIG);
+
+                try {
+                    GraphiteHistoryWriter graphiteWriter =
+                        new GraphiteHistoryWriter(context, keyMappingTable, reverseKeyMappingTable, METRIC_PREFIX, service, recordCollection, output,
+                                                  userFilter, queueFilter, excludedComponents, appInclusionFilter, appExclusionFilter, metricNamingRules);
+                    lines = graphiteWriter.write();
+                } catch (Exception e) {
+                    LOG.error("Error generating metrics for graphite", e);
+                    throw new IOException(e);
+                }
+
+                if (output.length() > 0) {
+
+                    try {
+                        LOG.info("SendToGraphite: " + recordCollection.getKey().toString() + " : " + lines + " metrics");
+            writer.write(output.toString());
+                    } catch (Exception e) {
+                        LOG.error("Error sending metrics to graphite", e);
+                        throw new IOException(e);
+                    }
+                }
+            }
+        }
+        // END
     }
 
     @Override
