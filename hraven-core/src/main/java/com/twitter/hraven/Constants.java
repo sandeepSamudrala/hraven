@@ -450,6 +450,7 @@ public class Constants {
   public static final String JOBCONF_GRAPHITE_INCLUDE_APPS = "hraven.sink.graphite.includeapps";
   public static final String JOBCONF_GRAPHITE_EXCLUDE_APPS = "hraven.sink.graphite.excludeapps";
   public static final String JOBCONF_GRAPHITE_NAMING_RULE_CONFIG = "hraven.sink.graphite.metric.naming.rules";
+  public static final String JOBCONF_GRAPHITE_MULTIPLE_CONFIG_PATHS = "hraven.multiple.config.files";
   
   public static final int GRAPHITE_DEFAULT_PORT = 2003;
   
