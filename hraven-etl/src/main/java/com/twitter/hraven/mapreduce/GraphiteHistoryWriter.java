@@ -77,6 +77,7 @@ public class GraphiteHistoryWriter {
 
   private TaskAttemptContext taskContext;
   
+  private String configPath;
   public enum Counters {
     GRAPHITE_SINK,
     APPS_FILTERED_IN,
@@ -104,7 +105,7 @@ public class GraphiteHistoryWriter {
    */
 
   public GraphiteHistoryWriter(TaskAttemptContext context, HTable keyMappingTable, HTable reverseKeyMappingTable, String prefix, HravenService serviceKey,
-      JobHistoryRecordCollection recordCollection, StringBuilder sb, String userFilter, String queueFilter, String excludedComponents, String appInclusionFilter, String appExclusionFilter, String metricNamingRuleFile) {
+      JobHistoryRecordCollection recordCollection, StringBuilder sb, String userFilter, String queueFilter, String excludedComponents, String appInclusionFilter, String appExclusionFilter, String metricNamingRuleFile, String configPath) {
     this.taskContext = context;
     this.keyMappingTable = keyMappingTable;
     this.reverseKeyMappingTable = reverseKeyMappingTable;
@@ -123,6 +124,7 @@ public class GraphiteHistoryWriter {
     if (StringUtils.isNotEmpty(appExclusionFilter))
       this.appExclusionFilter = Arrays.asList(appExclusionFilter.split(","));
     this.metricNamingRuleFile = metricNamingRuleFile;
+    this.configPath=configPath;
   }
 
   private boolean isAppExcluded(String appId) {
@@ -325,17 +327,17 @@ public class GraphiteHistoryWriter {
   }
   
   private void incrementCounter(Counters counter) {
-    incrementCounter(counter, 1);
+    incrementCounter(configPath+"_"+counter, 1);
   }
   
   private void incrementCounter(Counters counter, int count) {
     HadoopCompat.incrementCounter(
-      taskContext.getCounter(Counters.GRAPHITE_SINK.toString(), counter.toString()), count);
+      taskContext.getCounter(configPath+"_"+Counters.GRAPHITE_SINK.toString(), counter.toString()), count);
   }
   
   private void incrementCounter(String counter, int count) {
     HadoopCompat.incrementCounter(
-      taskContext.getCounter(Counters.GRAPHITE_SINK.toString(), counter), count);
+      taskContext.getCounter(configPath+"_"+Counters.GRAPHITE_SINK.toString(), counter), count);
   }
   
   public int write() throws IOException {
