@@ -194,7 +194,7 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
                 if (output.length() > 0) {
 
                     try {
-                        LOG.info("SendToGraphite: " + recordCollection.getKey().toString() + " : " + lines + " metrics");
+                        LOG.info("SendToGraphite: " + recordCollection.getKey().toString() + " : " + lines + " metrics"  + "( config path: " + configPair.getKey() + ")");
     			writer.write(output.toString());
                     } catch (Exception e) {
                         LOG.error("Error sending metrics to graphite", e);
