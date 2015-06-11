@@ -261,8 +261,8 @@ public class GraphiteHistoryWriter {
       
       if (!ruleMatched) {
         incrementCounter("NO_RULE_MATCHED", 1);
-        Expression exp = getParsedExpression(defaultRule, true);
-        metricsPath = exp.getValue(context, String.class);
+//        Expression exp = getParsedExpression(defaultRule, true);
+//        metricsPath = exp.getValue(context, String.class);
         LOG.warn("Defaulting to default metric path naming rule for app " + recordCollection.getKey().toString());
       }
       

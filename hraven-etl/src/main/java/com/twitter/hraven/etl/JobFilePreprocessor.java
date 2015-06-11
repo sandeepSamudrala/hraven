@@ -329,7 +329,7 @@ public class JobFilePreprocessor extends Configured implements Tool {
     FileStatus baseInputFileStatus = hdfs.getFileStatus(baseInputPath);
 
     if (!baseInputFileStatus.isDir()) {
-      throw new IOException("Base input is not a directory"
+      throw new IOException("Base input is not a directory: "
           + baseInputFileStatus.getPath().getName());
     }
 

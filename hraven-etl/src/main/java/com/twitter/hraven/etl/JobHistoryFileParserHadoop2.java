@@ -8,12 +8,10 @@
  */
 package com.twitter.hraven.etl;
 
-import com.google.common.collect.Maps;
-import com.twitter.hraven.*;
-import com.twitter.hraven.datasource.JobKeyConverter;
-import com.twitter.hraven.datasource.ProcessingException;
-import com.twitter.hraven.datasource.TaskKeyConverter;
-import com.twitter.hraven.util.ByteArrayWrapper;
+import java.io.EOFException;
+import java.io.IOException;
+import java.util.*;
+
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
@@ -30,9 +28,12 @@ import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 
-import java.io.EOFException;
-import java.io.IOException;
-import java.util.*;
+import com.google.common.collect.Maps;
+import com.twitter.hraven.*;
+import com.twitter.hraven.datasource.JobKeyConverter;
+import com.twitter.hraven.datasource.ProcessingException;
+import com.twitter.hraven.datasource.TaskKeyConverter;
+import com.twitter.hraven.util.ByteArrayWrapper;
 
 /**
  * Deal with JobHistory file parsing for job history files which are generated after MAPREDUCE-1016
@@ -66,7 +67,7 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
   /** hadoop2 JobState enum:
    * NEW, INITED, RUNNING, SUCCEEDED, FAILED, KILL_WAIT, KILLED, ERROR
    */
-  public static final String JOB_STATUS_SUCCEEDED = "SUCCEEDED";
+  public static final String JOB_STATUS_SUCCESS = "SUCCESS";
 
   /** explicitly initializing map millis and
    * reduce millis in case it's not found
@@ -209,11 +210,11 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
       throws ProcessingException {
 
     this.jobKey = jobKey;
-    
+
     if (this.jobRecords == null) {
       this.jobRecords = new JobHistoryRecordCollection(jobKey);
     }
-    
+
     this.jobKeyBytes = jobKeyConv.toBytes(jobKey);
     setJobId(jobKey.getJobId().getJobIdString());
 
@@ -390,7 +391,7 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
           String groupName = aCounter.get(NAME).toString();
           String counterName = countDetails.get(NAME).toString();
           Long counterValue = countDetails.getLong(VALUE);
-          
+
           /**
            * correct and populate map and reduce slot millis
            */
@@ -398,7 +399,7 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
               (Constants.SLOTS_MILLIS_REDUCES.equals(counterName))) {
             counterValue = getStandardizedCounterValue(counterName, counterValue);
           }
-          
+
           this.jobRecords.add(new JobHistoryRecord(RecordCategory.HISTORY_COUNTER, this.jobKey,
               new RecordDataKey(counterMetaGroupName, groupName, counterName), counterValue));
         }
@@ -421,16 +422,16 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
       processCounters(eventDetails, dataKey);
     } else {
       String type = fieldTypes.get(recType).get(dataKey);
-      if (type.equalsIgnoreCase(TYPE_STRING)) {
-        // look for job status
-        if (JobHistoryKeys.JOB_STATUS.toString().equals(
-          JobHistoryKeys.HADOOP2_TO_HADOOP1_MAPPING.get(dataKey))) {
+        if (type.equalsIgnoreCase(TYPE_STRING)) {
+            // look for job status
           // store it only if it's one of the terminal state events
-          if ((recType.equals(Hadoop2RecordType.JobFinished))
-              || (recType.equals(Hadoop2RecordType.JobUnsuccessfulCompletion))) {
-            this.jobStatus = eventDetails.getString(dataKey);
-          }
-        } else {
+          if (recType.equals(Hadoop2RecordType.JobFinished)) {
+            this.jobStatus = JOB_STATUS_SUCCESS;
+//              System.out.println(this.jobStatus);
+          } else if (recType.equals(Hadoop2RecordType.JobUnsuccessfulCompletion)) {
+              this.jobStatus = eventDetails.getString("jobStatus");
+//              System.out.println(this.jobStatus);
+          } else {
           String value = eventDetails.getString(dataKey);
           populateRecord(dataKey, value, adder);
         }
@@ -443,8 +444,8 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
           this.startTime = value;
         }
         // populate end time of the job for megabytemillis calculations
-        if ((recType.equals(Hadoop2RecordType.JobFinished))
-            || (recType.equals(Hadoop2RecordType.JobUnsuccessfulCompletion))) {
+        if ( (recType.equals(Hadoop2RecordType.JobFinished))
+            || (recType.equals(Hadoop2RecordType.JobUnsuccessfulCompletion)) ) {
           if (FINISH_TIME_KEY_STR.equals(JobHistoryKeys.HADOOP2_TO_HADOOP1_MAPPING.get(dataKey))) {
             this.endTime = value;
           }
@@ -488,7 +489,7 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
   private interface RecordAdder {
     public void addRecord(RecordDataKey key, Object value, boolean isNumeric);
   }
-  
+
   /**
    * process individual records
    * @throws JSONException
@@ -500,7 +501,7 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
     case JobFinished:
       // this setting is needed since the job history file is missing
       // the jobStatus field in the JOB_FINISHED event
-      this.jobStatus = JOB_STATUS_SUCCEEDED;
+      this.jobStatus = JOB_STATUS_SUCCESS;
     case JobInfoChange:
     case JobInited:
     case JobPriorityChange:
@@ -524,14 +525,14 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
         // generate a new record per AM Attempt
         taskRecords.add(new JobHistoryTaskRecord(RecordCategory.HISTORY_TASK_META, amAttemptIdKey,
             new RecordDataKey(Constants.RECORD_TYPE_COL), RecordTypes.Task.toString()));
-        
+
         iterateAndAddRecords(eventDetails, recType, new RecordAdder() {
           @Override
           public void addRecord(RecordDataKey key, Object value, boolean isNumeric) {
             taskRecords.add(new JobHistoryTaskRecord(isNumeric ? RecordCategory.HISTORY_TASK_COUNTER
                 : RecordCategory.HISTORY_TASK_META, amAttemptIdKey, key, value));
           }
-        });  
+        });
       }
       break;
 
@@ -539,17 +540,17 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
       if (processTasks) {
         final TaskKey taskMAttemptIdKey =
             getTaskKey(TASK_ATTEMPT_PREFIX, this.jobNumber, eventDetails.getString(ATTEMPTID));
-        
+
         taskRecords.add(new JobHistoryTaskRecord(RecordCategory.HISTORY_TASK_META, taskMAttemptIdKey,
           new RecordDataKey(Constants.RECORD_TYPE_COL), RecordTypes.MapAttempt.toString()));
-        
+
         iterateAndAddRecords(eventDetails, recType, new RecordAdder() {
           @Override
           public void addRecord(RecordDataKey key, Object value, boolean isNumeric) {
             taskRecords.add(new JobHistoryTaskRecord(isNumeric ? RecordCategory.HISTORY_TASK_COUNTER
                 : RecordCategory.HISTORY_TASK_META, taskMAttemptIdKey, key, value));
           }
-        });  
+        });
       }
       break;
 
@@ -559,14 +560,14 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
             getTaskKey(TASK_ATTEMPT_PREFIX, this.jobNumber, eventDetails.getString(ATTEMPTID));
         taskRecords.add(new JobHistoryTaskRecord(RecordCategory.HISTORY_TASK_META, taskRAttemptIdKey,
           new RecordDataKey(Constants.RECORD_TYPE_COL), RecordTypes.ReduceAttempt.toString()));
-        
+
         iterateAndAddRecords(eventDetails, recType, new RecordAdder() {
           @Override
           public void addRecord(RecordDataKey key, Object value, boolean isNumeric) {
             taskRecords.add(new JobHistoryTaskRecord(isNumeric ? RecordCategory.HISTORY_TASK_COUNTER
                 : RecordCategory.HISTORY_TASK_META, taskRAttemptIdKey, key, value));
           }
-        });        
+        });
       }
       break;
 
@@ -578,14 +579,14 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
             getTaskKey(TASK_ATTEMPT_PREFIX, this.jobNumber, eventDetails.getString(ATTEMPTID));
         taskRecords.add(new JobHistoryTaskRecord(RecordCategory.HISTORY_TASK_META, taskAttemptIdKey,
           new RecordDataKey(Constants.RECORD_TYPE_COL), RecordTypes.Task.toString()));
-        
+
         iterateAndAddRecords(eventDetails, recType, new RecordAdder() {
           @Override
           public void addRecord(RecordDataKey key, Object value, boolean isNumeric) {
             taskRecords.add(new JobHistoryTaskRecord(isNumeric ? RecordCategory.HISTORY_TASK_COUNTER
                 : RecordCategory.HISTORY_TASK_META, taskAttemptIdKey, key, value));
           }
-        });  
+        });
       }
       break;
 
@@ -598,14 +599,14 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
             getTaskKey(TASK_PREFIX, this.jobNumber, eventDetails.getString(TASKID));
         taskRecords.add(new JobHistoryTaskRecord(RecordCategory.HISTORY_TASK_META, taskIdKey,
           new RecordDataKey(Constants.RECORD_TYPE_COL), RecordTypes.Task.toString()));
-        
+
         iterateAndAddRecords(eventDetails, recType, new RecordAdder() {
           @Override
           public void addRecord(RecordDataKey key, Object value, boolean isNumeric) {
             taskRecords.add(new JobHistoryTaskRecord(isNumeric ? RecordCategory.HISTORY_TASK_COUNTER
                 : RecordCategory.HISTORY_TASK_META, taskIdKey, key, value));
           }
-        });        
+        });
       }
       break;
     default:
@@ -693,7 +694,7 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
     String jobHistoryKey = getKey(key);
     adder.addRecord(new RecordDataKey(jobHistoryKey), getValue(jobHistoryKey, value), true);
   }
-  
+
   /**
    * populates a put for string values
    * @param {@link Put} p
@@ -796,11 +797,11 @@ public class JobHistoryFileParserHadoop2 extends JobHistoryFileParserBase {
   }
 
   /**
-   * calculate mega byte millis puts as: 
-   * if not uberized: 
+   * calculate mega byte millis puts as:
+   * if not uberized:
    *        map slot millis * mapreduce.map.memory.mb
-   *        + reduce slot millis * mapreduce.reduce.memory.mb 
-   *        + yarn.app.mapreduce.am.resource.mb * job runtime 
+   *        + reduce slot millis * mapreduce.reduce.memory.mb
+   *        + yarn.app.mapreduce.am.resource.mb * job runtime
    * if uberized:
    *        yarn.app.mapreduce.am.resource.mb * job run time
    */

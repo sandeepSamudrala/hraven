@@ -9,37 +9,23 @@
 package com.twitter.hraven.etl;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Test;
-import com.google.common.io.Files;
-import com.twitter.hraven.Constants;
-import com.twitter.hraven.HadoopVersion;
-import com.twitter.hraven.JobHistoryKeys;
-import com.twitter.hraven.JobHistoryRecord;
-import com.twitter.hraven.JobHistoryRecordCollection;
-import com.twitter.hraven.JobHistoryTaskRecord;
-import com.twitter.hraven.JobKey;
-import com.twitter.hraven.RecordCategory;
-import com.twitter.hraven.RecordDataKey;
-import com.twitter.hraven.datasource.JobKeyConverter;
-import com.twitter.hraven.datasource.ProcessingException;
-import com.twitter.hraven.datasource.TaskKeyConverter;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.junit.Test;
+
+import com.google.common.io.Files;
+import com.twitter.hraven.*;
+import com.twitter.hraven.datasource.ProcessingException;
 
 /**
  * Test {@link JobHistoryFileParserHadoop2}
@@ -90,7 +76,7 @@ public class TestJobHistoryFileParserHadoop2 {
             JobHistoryKeys.JOB_STATUS.toString().toLowerCase()));
     
     assertNotNull(statusRecord);
-    assertEquals((String)statusRecord, JobHistoryFileParserHadoop2.JOB_STATUS_SUCCEEDED);
+    assertEquals((String)statusRecord, JobHistoryFileParserHadoop2.JOB_STATUS_SUCCESS);
 
     List<JobHistoryTaskRecord> taskRecords = (List<JobHistoryTaskRecord>) historyFileParser.getTaskRecords();
     assertEquals(382, taskRecords.size());
