@@ -1,18 +1,14 @@
 package com.twitter.hraven.mapreduce;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.Socket;
-import java.net.URLEncoder;
-import java.util.regex.Pattern;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -23,14 +19,15 @@ import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.codehaus.jackson.map.ObjectMapper;
 
+import com.twitter.common.collections.Pair;
 import com.twitter.hraven.Constants;
 import com.twitter.hraven.HravenRecord;
 import com.twitter.hraven.HravenService;
-import com.twitter.hraven.JobHistoryRecordCollection;
 import com.twitter.hraven.JobHistoryRecord;
-import com.twitter.hraven.JobKey;
-import com.twitter.hraven.RecordCategory;
+import com.twitter.hraven.JobHistoryRecordCollection;
+import com.twitter.hraven.etl.HadoopUtil;
 import com.twitter.hraven.util.EnumWritable;
 
 /**
@@ -40,7 +37,8 @@ import com.twitter.hraven.util.EnumWritable;
 public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenService>, HravenRecord> {
 
   private static Log LOG = LogFactory.getLog(GraphiteOutputFormat.class);
-  private static Writer writer;
+  private static Map<String, GraphiteSinkConf> sinkConfMap;
+  private static Map<String, Pair<Writer,Socket>> graphiteSockets;
 
   /**
    * {@link OutputCommitter} which does nothing
@@ -71,57 +69,17 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
   }
 
   protected static class GraphiteRecordWriter extends RecordWriter<EnumWritable<HravenService>, HravenRecord> {
-
-    // prepend this prefix to all metrics
-    private String METRIC_PREFIX;
-    
-    // filter jobs not submitted by this user
-    private String userFilter;
-    
-    // filter jobs not submitted in this queue
-    private String queueFilter;
-    
-    // exclude these metric path components (e.g MultiInputCounters - create a lot of redundant tree
-    // paths, and you wouldn't want to send them to graphite)
-    private String excludedComponents;
-    
-    // comma seperated list of app substrings to include
-    private String appInclusionFilter;
-    
-    //comma seperated list of app substrings to exclude
-    private String appExclusionFilter;
-    
     private HTable keyMappingTable;
     private HTable reverseKeyMappingTable;
-
-    private String metricNamingRules;
-
     private TaskAttemptContext context;
     
-
-    public GraphiteRecordWriter(TaskAttemptContext context, Configuration hbaseconfig, String host, int port, String prefix, String userFilter, String queueFilter, String excludedComponents, String appInclusionFilter, String appExclusionFilter, String metricNamingRules) throws IOException {
+    public GraphiteRecordWriter(TaskAttemptContext context, Configuration hbaseconfig) throws IOException {
       this.context = context;
-      this.METRIC_PREFIX = prefix;
-      this.userFilter = userFilter;
-      this.queueFilter = queueFilter;
-      this.excludedComponents = excludedComponents;
-      this.appInclusionFilter = appInclusionFilter;
-      this.appExclusionFilter = appExclusionFilter;
-      this.metricNamingRules = metricNamingRules;
-      
       keyMappingTable = new HTable(hbaseconfig, Constants.GRAPHITE_KEY_MAPPING_TABLE_BYTES);
       keyMappingTable.setAutoFlush(false);
 
       reverseKeyMappingTable = new HTable(hbaseconfig, Constants.GRAPHITE_REVERSE_KEY_MAPPING_TABLE_BYTES);
       reverseKeyMappingTable.setAutoFlush(false);
-
-      try {
-        // Open an connection to Graphite server.
-        Socket socket = new Socket(host, port);
-        writer = new OutputStreamWriter(socket.getOutputStream());
-      } catch (Exception e) {
-        throw new IOException("Error connecting to graphite, " + host + ":" + port, e);
-      }
     }
 
     /**
@@ -140,36 +98,29 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
       } else {
         recordCollection = new JobHistoryRecordCollection((JobHistoryRecord) value);
       }
-
-      StringBuilder output = new StringBuilder();
-      int lines = 0;
-
-      try {
-        GraphiteHistoryWriter graphiteWriter =
-            new GraphiteHistoryWriter(context, keyMappingTable, reverseKeyMappingTable, METRIC_PREFIX, service, recordCollection, output, userFilter, queueFilter, excludedComponents, appInclusionFilter, appExclusionFilter, metricNamingRules);
-        lines = graphiteWriter.write();
-      } catch (Exception e) {
-        LOG.error("Error generating metrics for graphite", e);
-        throw new IOException(e);
-      }
-
-      if (output.length() > 0) {
-        
-        try {
-          LOG.info("SendToGraphite: " + recordCollection.getKey().toString() + " : " + lines + " metrics");
-          writer.write(output.toString());
+      
+      for (Entry<String, GraphiteSinkConf> confEntry : sinkConfMap.entrySet()) {
+        try{
+            GraphiteHistoryWriter graphiteWriter =
+                    new GraphiteHistoryWriter(context, keyMappingTable,
+                            reverseKeyMappingTable, service, recordCollection,
+                            confEntry.getValue(), graphiteSockets.get(confEntry.getKey()).getFirst());
+            graphiteWriter.write();
         } catch (Exception e) {
-          LOG.error("Error sending metrics to graphite", e);
-          throw new IOException(e);
-        }  
+            LOG.error("Error generating metrics for graphite", e);
+            throw new IOException(e);
+        }
       }
     }
 
     @Override
     public void close(TaskAttemptContext context) throws IOException, InterruptedException {
       try {
-        LOG.info("flushing records and closing writer");
-        writer.close();
+        LOG.info("flushing records and closing writers");
+        for (Entry<String, Pair<Writer, Socket>> writerEntry: graphiteSockets.entrySet()) {
+            writerEntry.getValue().getFirst().close();
+            writerEntry.getValue().getSecond().close();
+        }
       } catch (Exception e) {
         throw new IOException("Error flush metrics to graphite", e);
       }
@@ -195,17 +146,30 @@ public class GraphiteOutputFormat extends OutputFormat<EnumWritable<HravenServic
   public RecordWriter<EnumWritable<HravenService>, HravenRecord> getRecordWriter(TaskAttemptContext context)
       throws IOException, InterruptedException {
     Configuration conf = context.getConfiguration();
-    return new GraphiteRecordWriter(context, HBaseConfiguration.create(conf),
-                                    conf.get(Constants.JOBCONF_GRAPHITE_HOST_KEY, Constants.GRAPHITE_DEFAULT_HOST),
-                                    conf.getInt(Constants.JOBCONF_GRAPHITE_PORT_KEY, Constants.GRAPHITE_DEFAULT_PORT),
-                                    conf.get(Constants.JOBCONF_GRAPHITE_PREFIX, Constants.GRAPHITE_DEFAULT_PREFIX),
-                                    conf.get(Constants.JOBCONF_GRAPHITE_USER_FILTER),
-                                    conf.get(Constants.JOBCONF_GRAPHITE_QUEUE_FILTER),
-                                    conf.get(Constants.JOBCONF_GRAPHITE_EXCLUDED_COMPONENTS),
-                                    conf.get(Constants.JOBCONF_GRAPHITE_INCLUDE_APPS),
-                                    conf.get(Constants.JOBCONF_GRAPHITE_EXCLUDE_APPS),
-                                    conf.get(Constants.JOBCONF_GRAPHITE_NAMING_RULE_CONFIG)
-                                    );
+    
+    if (sinkConfMap == null) {
+        sinkConfMap = new HashMap<String, GraphiteSinkConf>();
+        graphiteSockets = new HashMap<String, Pair<Writer,Socket>>();
+        String confPath = context.getConfiguration().get(Constants.JOBCONF_GRAPHITE_CONFIG_PATH);
+        String[] sinkConfigs = confPath.split(",");
+        for (String configFile : sinkConfigs) {
+            ObjectMapper objectMapper = new ObjectMapper();
+            String configStr = HadoopUtil.readFsFile(configFile, new Configuration());
+            GraphiteSinkConf sinkConf = objectMapper.readValue(configStr, GraphiteSinkConf.class);
+            sinkConf.setName(Paths.get(configFile).getFileName().toString());
+            sinkConfMap.put(configFile, sinkConf);
+            try {
+                // Open an connection to the graphite server for this sink config
+                Socket socket = new Socket(sinkConf.getGraphiteHost(), sinkConf.getGraphitePort());
+                graphiteSockets.put(configFile, new Pair<Writer, Socket>(new OutputStreamWriter(socket.getOutputStream()), socket));
+              } catch (Exception e) {
+                throw new IOException("Error connecting to graphite sink, " + configFile + "(" + sinkConf.getGraphiteHost() + ":" + sinkConf.getGraphitePort() + ")", e);
+              }
+        }
+        LOG.info("Graphite sink config map: " + sinkConfMap.toString());
+    }
+    
+    return new GraphiteRecordWriter(context, HBaseConfiguration.create(conf));
   }
 
 }

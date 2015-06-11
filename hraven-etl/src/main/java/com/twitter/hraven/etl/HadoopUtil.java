@@ -1,6 +1,8 @@
 package com.twitter.hraven.etl;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -23,5 +25,18 @@ public class HadoopUtil {
         conf.set(Constants.HADOOP_TMP_JARS_CONF, tmpjars.toString());
       }
     }
+  }
+
+public static String readFsFile(String fsFile, Configuration conf) throws IOException {
+    Path path = new Path(fsFile);
+    FileSystem fs = null;
+    fs = path.getFileSystem(conf);
+    BufferedReader br = new BufferedReader(new InputStreamReader(fs.open(path)));
+    StringBuilder everything = new StringBuilder();
+    String line;
+    while( (line = br.readLine()) != null) {
+       everything.append(line);
+    }
+    return everything.toString();
   }
 }
