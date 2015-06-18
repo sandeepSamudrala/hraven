@@ -3,6 +3,8 @@ package com.twitter.hraven.mapreduce;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -63,6 +65,7 @@ public class GraphiteHistoryWriter {
   private List<String> excludedComponents;
   private List<String> appInclusionFilter;
   private List<String> appExclusionFilter;
+  private Map<String, String> userTokens;
 
   
   public enum Counters {
@@ -195,6 +198,7 @@ public class GraphiteHistoryWriter {
   private Expression getParsedExpression(String exp, boolean template) {
     exp = exp.replaceAll("#conf\\((.*)\\)", "#conf(#records,$1)");
     exp = exp.replaceAll("#\\{([^.:]*)\\}", "#{#sanitize($1)}");
+    exp = exp.replaceAll("#submitTime", "#submitTime(#records)");
     
     ExpressionParser parser = new SpelExpressionParser();
     
@@ -212,7 +216,7 @@ public class GraphiteHistoryWriter {
       
       StandardEvaluationContext context = new StandardEvaluationContext();
       Map<String, Object> systemTokens = getSystemTokens();
-      Map<String, String> userTokens = getUserTags();
+      userTokens = getUserTags();
       
       try {
         context.registerFunction("path", GraphiteHistoryWriter.class.getDeclaredMethod("getDotPath", String[].class));
@@ -308,7 +312,7 @@ public class GraphiteHistoryWriter {
 
       // Round the timestamp to second as Graphite accepts it in such
       // a format.
-      int timestamp = Math.round(recordCollection.getSubmitTime() / 1000);
+      int timestamp = getTimeStamp();
       
       // For now, relies on receiving job history and job conf as part of the same
       // JobHistoryMultiRecord
@@ -370,6 +374,62 @@ public class GraphiteHistoryWriter {
     
     LOG.info("SendToGraphite: " + recordCollection.getKey().toString() + " : " + lines + " metrics"  + "(config: " + sinkConfig.getName() + ")");
     socketWriter.write(lines.toString());
+  }
+
+    private int getTimeStamp() {
+        int timestamp;
+
+//        timestamp = Math.round(recordCollection.getSubmitTime() / 1000);
+//        return timestamp;
+
+
+        StandardEvaluationContext context = new StandardEvaluationContext();
+
+        try {
+            context.registerFunction("dateToEpoch", GraphiteHistoryWriter.class.getDeclaredMethod("dateToEpoch", String.class));
+            context.registerFunction("submitTime", GraphiteHistoryWriter.class.getDeclaredMethod("submitTime",JobHistoryRecordCollection.class));
+        } catch (SecurityException e) {
+            LOG.error("SecurityException while adding methods to SEPL context", e);
+            throw new RuntimeException(e);
+        } catch (NoSuchMethodException e) {
+            LOG.error("NoSuchMethodException while adding methods to SEPL context", e);
+            throw new RuntimeException(e);
+        }
+        context.setVariable("tag", userTokens);
+        context.setVariable("records", recordCollection);
+
+        Expression filterExp = getParsedExpression(sinkConfig.getTimestampFilter(), false);
+        LOG.info("filterExp: " + filterExp.getExpressionString() );
+        LOG.info("userTokens: " + userTokens.toString());
+        Long timestampLong = filterExp.getValue(context, Long.class);
+        if(timestampLong != null) {
+            timestamp = Math.round(timestampLong / 1000);
+        } else {
+            timestamp = Math.round(submitTime(recordCollection) / 1000);
+        }
+        LOG.info("timestamp: " + timestamp);
+        return timestamp;
+    }
+
+    private static Long dateToEpoch(String dateString) throws ParseException {
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd-HH-mm");
+        if(dateString != null) {
+            Date date = df.parse(dateString);
+            return date.getTime();
+        } else {
+            return null;
+        }
+    }
+
+    private static Long submitTime(JobHistoryRecordCollection recordCollection){
+        return recordCollection.getSubmitTime();
+    }
+
+    private static String nominalTime(Map<String, String> userTokens) {
+        if(userTokens.containsKey("nominalTime"))
+            return userTokens.get("nominalTime");
+        else
+            return null;
   }
 
   private void storeAppIdMapping(String metricsPathPrefix) throws IOException {

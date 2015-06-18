@@ -46,6 +46,9 @@ public class GraphiteSinkConf {
     @JsonProperty(JOBCONF_GRAPHITE_NAMING_RULE_CONFIG)
     private List<NamingRule> metricNamingRules;
    
+    @JsonProperty(JOBCONF_GRAPHITE_TIMESTAMP_FILTER)
+    private String timestampFilter;
+   
     public String getGraphiteHost() {
         return graphiteHost;
     }
