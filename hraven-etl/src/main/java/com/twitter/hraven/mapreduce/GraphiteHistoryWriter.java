@@ -5,10 +5,7 @@ import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
@@ -24,15 +21,7 @@ import org.springframework.expression.common.TemplateParserContext;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
-import com.twitter.hraven.Constants;
-import com.twitter.hraven.Framework;
-import com.twitter.hraven.HravenService;
-import com.twitter.hraven.JobHistoryKeys;
-import com.twitter.hraven.JobHistoryRecordCollection;
-import com.twitter.hraven.JobHistoryRecord;
-import com.twitter.hraven.JobKey;
-import com.twitter.hraven.RecordCategory;
-import com.twitter.hraven.RecordDataKey;
+import com.twitter.hraven.*;
 import com.twitter.hraven.datasource.JobKeyConverter;
 import com.twitter.hraven.util.ByteUtil;
 
@@ -59,6 +48,7 @@ public class GraphiteHistoryWriter {
   private TaskAttemptContext taskContext;
   private GraphiteSinkConf sinkConfig;
   private Writer socketWriter;
+  StandardEvaluationContext expressionEvalContext = new StandardEvaluationContext();
 
   private List<String> userFilter;
   private List<String> queueFilter;
@@ -74,7 +64,7 @@ public class GraphiteHistoryWriter {
     APPS_FILTERED_OUT,
     APP_EXCLUDED_COMPS,
     METRICS_WRITTEN
-  };
+  }
 
   /**
    * Writes a single {@link JobHistoryRecord} to the specified {@link HravenService} Passes the
@@ -103,6 +93,8 @@ public class GraphiteHistoryWriter {
     this.recordCollection = recordCollection;
     this.sinkConfig = sinkConfig;
     this.socketWriter = socketWriter;
+    this.userTokens = getUserTags();
+    this.expressionEvalContext = getExpressionEvalContext();
     
     LOG.info("Working with metric rule file: " + sinkConfig.getMetricNamingRules().toString());
     
@@ -209,19 +201,16 @@ public class GraphiteHistoryWriter {
     }
   }
 
-  private String getMetricsPath() throws IOException {
-      String metricsPath = null;
-      
-      String defaultRule = "c:#{#cluster}.q:#{#queue}.u:#{#user}.all.s:#{#status}.j:#{#jobName}";
-      
-      StandardEvaluationContext context = new StandardEvaluationContext();
+  private StandardEvaluationContext getExpressionEvalContext() {
       Map<String, Object> systemTokens = getSystemTokens();
-      userTokens = getUserTags();
-      
+      StandardEvaluationContext context = new StandardEvaluationContext();
       try {
         context.registerFunction("path", GraphiteHistoryWriter.class.getDeclaredMethod("getDotPath", String[].class));
         context.registerFunction("sanitize", GraphiteHistoryWriter.class.getDeclaredMethod("sanitize",String.class));
-        context.registerFunction("conf", GraphiteHistoryWriter.class.getDeclaredMethod("getJobConfProp", new Class[] {JobHistoryRecordCollection.class, String.class}));
+          context.registerFunction("conf", GraphiteHistoryWriter.class.getDeclaredMethod("getJobConfProp", new Class[] {JobHistoryRecordCollection.class,
+                                                                                                                        String.class}));
+          context.registerFunction("dateToEpoch", GraphiteHistoryWriter.class.getDeclaredMethod("dateToEpoch", String.class));
+          context.registerFunction("submitTime", GraphiteHistoryWriter.class.getDeclaredMethod("submitTime",JobHistoryRecordCollection.class));
       } catch (SecurityException e) {
         LOG.error("SecurityException while adding methods to SEPL context", e);
         throw new RuntimeException(e);
@@ -233,12 +222,20 @@ public class GraphiteHistoryWriter {
       context.setVariable("tag", userTokens);
       context.setVariable("records", recordCollection);
       
+      return context;
+  }
+
+  private String getMetricsPath() throws IOException {
+      String metricsPath = null;
+      
+      String defaultRule = "c:#{#cluster}.q:#{#queue}.u:#{#user}.all.s:#{#status}.j:#{#jobName}";
+      
       boolean ruleMatched = false;
       
       int numRule = 0;
       for (NamingRule rule: sinkConfig.getMetricNamingRules()) {
         Expression filterExp = getParsedExpression(rule.getFilter(), false);
-        if (filterExp.getValue(context, Boolean.class)) {
+        if (filterExp.getValue(expressionEvalContext, Boolean.class)) {
           incrementCounter("RULE_" + numRule + "_MATCHED", 1);
           String regJobName = recordCollection.getKey().getAppId();
           if (rule.getReplace() != null) {
@@ -253,10 +250,10 @@ public class GraphiteHistoryWriter {
               numReplaceRule++;
             }
           }
-          context.setVariable("regJobName", regJobName);
+        expressionEvalContext.setVariable("regJobName", regJobName);
           
           Expression nameExp = getParsedExpression(rule.getName(), true);
-          metricsPath = nameExp.getValue(context, String.class);
+          metricsPath = nameExp.getValue(expressionEvalContext, String.class);
           ruleMatched = true;
           break;
         }
@@ -267,14 +264,14 @@ public class GraphiteHistoryWriter {
         incrementCounter("NO_RULE_MATCHED", 1);
 //        Expression exp = getParsedExpression(defaultRule, true);
 //        metricsPath = exp.getValue(context, String.class);
-        LOG.warn("Defaulting to default metric path naming rule for app " + recordCollection.getKey().toString());
+//        LOG.warn("Defaulting to default metric path naming rule for app " + recordCollection.getKey().toString());
       }
       
       return metricsPath;
   }
   
   private void incrementCounter(Counters counter) {
-    incrementCounter(sinkConfig.getName() + "_" + counter, 1);
+    incrementCounter(counter, 1);
   }
   
   private void incrementCounter(Counters counter, int count) {
@@ -296,7 +293,6 @@ public class GraphiteHistoryWriter {
     int lineCount = 0;
     
     StringBuilder lines = new StringBuilder();
-    
     if (filterApp()) {
       incrementCounter(Counters.APPS_FILTERED_IN);
       
@@ -377,38 +373,16 @@ public class GraphiteHistoryWriter {
   }
 
     private int getTimeStamp() {
-        int timestamp;
-
-//        timestamp = Math.round(recordCollection.getSubmitTime() / 1000);
-//        return timestamp;
-
-
-        StandardEvaluationContext context = new StandardEvaluationContext();
-
-        try {
-            context.registerFunction("dateToEpoch", GraphiteHistoryWriter.class.getDeclaredMethod("dateToEpoch", String.class));
-            context.registerFunction("submitTime", GraphiteHistoryWriter.class.getDeclaredMethod("submitTime",JobHistoryRecordCollection.class));
-        } catch (SecurityException e) {
-            LOG.error("SecurityException while adding methods to SEPL context", e);
-            throw new RuntimeException(e);
-        } catch (NoSuchMethodException e) {
-            LOG.error("NoSuchMethodException while adding methods to SEPL context", e);
-            throw new RuntimeException(e);
-        }
-        context.setVariable("tag", userTokens);
-        context.setVariable("records", recordCollection);
-
-        Expression filterExp = getParsedExpression(sinkConfig.getTimestampFilter(), false);
-        LOG.info("filterExp: " + filterExp.getExpressionString() );
+        Expression timestampExp = getParsedExpression(sinkConfig.getTimestampExpression(), false);
+        LOG.info("filterExp: " + timestampExp.getExpressionString() );
         LOG.info("userTokens: " + userTokens.toString());
-        Long timestampLong = filterExp.getValue(context, Long.class);
-        if(timestampLong != null) {
-            timestamp = Math.round(timestampLong / 1000);
+
+        Long timestamp = timestampExp.getValue(expressionEvalContext, Long.class);
+        if(timestamp != null) {
+            return Math.round(timestamp / 1000);
         } else {
-            timestamp = Math.round(submitTime(recordCollection) / 1000);
+            return Math.round(submitTime(recordCollection) / 1000);
         }
-        LOG.info("timestamp: " + timestamp);
-        return timestamp;
     }
 
     private static Long dateToEpoch(String dateString) throws ParseException {
@@ -424,13 +398,6 @@ public class GraphiteHistoryWriter {
     private static Long submitTime(JobHistoryRecordCollection recordCollection){
         return recordCollection.getSubmitTime();
     }
-
-    private static String nominalTime(Map<String, String> userTokens) {
-        if(userTokens.containsKey("nominalTime"))
-            return userTokens.get("nominalTime");
-        else
-            return null;
-  }
 
   private void storeAppIdMapping(String metricsPathPrefix) throws IOException {
     Put put = new Put(new JobKeyConverter().toBytes(recordCollection.getKey()));
