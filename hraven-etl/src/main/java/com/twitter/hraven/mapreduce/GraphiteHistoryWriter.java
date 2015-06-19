@@ -261,7 +261,6 @@ public class GraphiteHistoryWriter {
       
       if (!ruleMatched) {
         incrementCounter("NO_RULE_MATCHED", 1);
-        LOG.warn("Defaulting to default metric path naming rule for app " + recordCollection.getKey().toString());
       }
       
       return metricsPath;
