@@ -262,9 +262,6 @@ public class GraphiteHistoryWriter {
       
       if (!ruleMatched) {
         incrementCounter("NO_RULE_MATCHED", 1);
-//        Expression exp = getParsedExpression(defaultRule, true);
-//        metricsPath = exp.getValue(context, String.class);
-//        LOG.warn("Defaulting to default metric path naming rule for app " + recordCollection.getKey().toString());
       }
       
       return metricsPath;
@@ -293,7 +290,9 @@ public class GraphiteHistoryWriter {
     int lineCount = 0;
     
     StringBuilder lines = new StringBuilder();
-    if (filterApp()) {
+    String metricsPath = sinkConfig.getGraphitePrefix() + "." + getMetricsPath();
+
+    if (filterApp() && metricsPath != null) {
       incrementCounter(Counters.APPS_FILTERED_IN);
       
       String metricsPath = sinkConfig.getGraphitePrefix() + "." + getMetricsPath();
@@ -362,14 +361,14 @@ public class GraphiteHistoryWriter {
         lines.append(metricsPath + ".").append(runTimeKey + " " + (finishTime-launchTime) + " " + timestamp + "\n");
         lineCount++;
       }
+
+      incrementCounter(Counters.METRICS_WRITTEN, lineCount);
+    
+      LOG.info("SendToGraphite: " + recordCollection.getKey().toString() + " : " + lines + " metrics"  + "(config: " + sinkConfig.getName() + ")");
+      socketWriter.write(lines.toString());
     } else {
       incrementCounter(Counters.APPS_FILTERED_OUT);
     }
-    
-    incrementCounter(Counters.METRICS_WRITTEN, lineCount);
-    
-    LOG.info("SendToGraphite: " + recordCollection.getKey().toString() + " : " + lines + " metrics"  + "(config: " + sinkConfig.getName() + ")");
-    socketWriter.write(lines.toString());
   }
 
     private int getTimeStamp() {
