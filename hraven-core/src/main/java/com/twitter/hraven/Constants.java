@@ -451,6 +451,7 @@ public class Constants {
   public static final String JOBCONF_GRAPHITE_EXCLUDE_APPS = "hraven.sink.graphite.excludeapps";
   public static final String JOBCONF_GRAPHITE_NAMING_RULE_CONFIG = "hraven.sink.graphite.metric.naming.rules";
   public static final String JOBCONF_GRAPHITE_CONFIG_PATH = "hraven.sink.graphite.config";
+  public static final String JOBCONF_GRAPHITE_TIMESTAMP_EXPRESSION = "hraven.sink.graphite.timestamp.expression";
   
   public static final int GRAPHITE_DEFAULT_PORT = 2003;
   

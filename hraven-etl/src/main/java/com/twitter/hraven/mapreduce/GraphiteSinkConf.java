@@ -1,11 +1,11 @@
 package com.twitter.hraven.mapreduce;
 
+import static com.twitter.hraven.Constants.*;
+
 import java.util.List;
 
 import org.codehaus.jackson.annotate.JsonProperty;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
-
-import static com.twitter.hraven.Constants.*;
 
 @JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)
 public class GraphiteSinkConf {
@@ -45,6 +45,9 @@ public class GraphiteSinkConf {
     
     @JsonProperty(JOBCONF_GRAPHITE_NAMING_RULE_CONFIG)
     private List<NamingRule> metricNamingRules;
+   
+    @JsonProperty(JOBCONF_GRAPHITE_TIMESTAMP_EXPRESSION)
+    private String timestampExpression;
    
     public String getGraphiteHost() {
         return graphiteHost;
@@ -134,4 +137,8 @@ public class GraphiteSinkConf {
     public void setMetricNamingRules(List<NamingRule> metricNamingRules) {
         this.metricNamingRules = metricNamingRules;
     }
+
+    public String getTimestampExpression() {return timestampExpression;}
+
+    public void setTimestampExpression(String timestampExpression) { this.timestampExpression = timestampExpression;}
 }
